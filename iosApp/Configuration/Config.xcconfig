@@ -1,0 +1,12 @@
+// Ajustes por marca (marca blanca). Un archivo como este por restaurante.
+// TEAM_ID: identificador del equipo de Apple Developer (10 caracteres). Vacio = sin firma (solo simulador).
+TEAM_ID=
+
+// Identificador unico de la app en el App Store.
+BUNDLE_ID=com.whitelabel.restaurantes
+
+// Nombre interno del producto (.app / ejecutable). Solo ASCII, sin acentos.
+APP_NAME=Menu
+
+// Nombre visible bajo el icono. Aqui si se permiten acentos y espacios.
+APP_DISPLAY_NAME=Menú
