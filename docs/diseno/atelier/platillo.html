@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<title>Arrachera al carbón — Brasa Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="has-dock">
+
+<figure class="hero">
+  <img src="../fotos/arrachera_papas.jpg" alt="Arrachera rebanada con papas a la francesa y hierbas frescas en plato blanco">
+  <a class="hero__back" href="menu.html" aria-label="Volver al menú">
+    <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 10h-13M8.5 4.5L3 10l5.5 5.5"/></svg>
+  </a>
+</figure>
+
+<main class="page">
+
+  <header class="open__head">
+    <p class="label">03 · De la parrilla</p>
+    <div class="open__title">
+      <h1>Arrachera al carbón</h1>
+      <p class="price">$345</p>
+    </div>
+    <p class="open__desc">Marinada, asada al carbón y rebanada al momento.</p>
+    <dl class="facts facts--inline">
+      <div>
+        <dt>Porción</dt>
+        <dd>300 g</dd>
+      </div>
+      <div>
+        <dt>Listo en</dt>
+        <dd>25–35 min</dd>
+      </div>
+    </dl>
+  </header>
+
+  <form class="groups" action="#" method="post" id="pedido">
+
+    <section class="group" role="radiogroup" aria-labelledby="g-termino" aria-required="true">
+      <header class="group__head">
+        <h2 class="group__title" id="g-termino">Término</h2>
+        <p class="label label--ink label--end">Obligatorio</p>
+      </header>
+      <div class="segments">
+        <label class="segment"><input class="sr-only" type="radio" name="termino" value="rojo" required><span>Rojo</span></label>
+        <label class="segment"><input class="sr-only" type="radio" name="termino" value="medio" checked><span>Medio</span></label>
+        <label class="segment"><input class="sr-only" type="radio" name="termino" value="tres-cuartos"><span>Tres cuartos</span></label>
+        <label class="segment"><input class="sr-only" type="radio" name="termino" value="bien-cocido"><span>Bien cocido</span></label>
+      </div>
+    </section>
+
+    <!-- opcional: la guarnición incluida ya viene elegida; cambiarla es decisión del comensal -->
+    <section class="group" role="radiogroup" aria-labelledby="g-guarnicion">
+      <header class="group__head">
+        <h2 class="group__title" id="g-guarnicion">Guarnición</h2>
+        <p class="label label--end">Elige una</p>
+      </header>
+      <ul class="options">
+        <li><label class="option"><input class="sr-only" type="radio" name="guarnicion" value="papas" checked><span class="option__name">Papas a la francesa</span><span class="option__delta option__delta--none">Incluida</span><span class="radio" aria-hidden="true"></span></label></li>
+        <li><label class="option"><input class="sr-only" type="radio" name="guarnicion" value="ensalada"><span class="option__name">Ensalada verde</span><span class="radio" aria-hidden="true"></span></label></li>
+        <li><label class="option"><input class="sr-only" type="radio" name="guarnicion" value="esquites" data-delta="25"><span class="option__name">Esquites</span><span class="option__delta">+$25</span><span class="radio" aria-hidden="true"></span></label></li>
+      </ul>
+    </section>
+
+  </form>
+
+</main>
+
+<div class="dock">
+  <div class="order">
+    <div class="qty" role="group" aria-label="Cantidad">
+      <button class="qty__btn" type="button" aria-label="Quitar uno">
+        <svg class="icon icon--sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg>
+      </button>
+      <span class="qty__n" aria-live="polite">1</span>
+      <button class="qty__btn" type="button" aria-label="Agregar uno">
+        <svg class="icon icon--sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
+      </button>
+    </div>
+    <button class="cta" type="submit" form="pedido">Agregar · <span class="total__base">$345</span><span class="total__plus">$370</span></button>
+  </div>
+</div>
+
+</body>
+</html>

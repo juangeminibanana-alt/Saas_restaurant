@@ -1,0 +1,772 @@
+/* ==========================================================================
+   ATELIER — lujo silencioso
+   Sistema de diseño para el menú del comensal (marca blanca).
+
+   Cuatro reglas:
+   1. Una sola retícula: dos columnas de 163 con medianil de 16 y márgenes de 24.
+   2. Una sola lámina en tres tamaños: vertical 4:5 (163 × 204) en la retícula,
+      abierta 5:4 para el platillo de la casa y para el platillo abierto,
+      y miniatura cuadrada de 72 en los renglones de lista.
+   3. Un solo color: el de la marca del restaurante, y solo como punto,
+      línea fina o acción principal. Lo que ya está en el pedido va en tinta;
+      el estado (abierto / cerrado) también: nunca depende del color de marca.
+   4. Dos grises con oficio distinto: el filete separa (decorativo),
+      el contorno de control delimita algo que se toca (3:1 sobre blanco).
+   ========================================================================== */
+
+:root {
+  /* ---- Color ---------------------------------------------------------- */
+  --c-bg:            #FFFFFF;  /* fondo */
+  --c-panel:         #F4F4F2;  /* superficie neutra: fondo de la lámina mientras carga la foto */
+  --c-line:          #E6E6E3;  /* filete de 1px: separa renglones y segmentos */
+  --c-control:       #8C8C88;  /* contorno de controles — 3.4:1 sobre blanco */
+  --c-ink:           #111111;  /* texto, reglas fuertes, barra del pedido, estado */
+  --c-muted:         #6B6B6B;  /* texto secundario — 5.3:1 sobre blanco */
+  --c-brand:         #B4411F;  /* brasa: color de marca — 5.6:1 con blanco */
+  --c-on-ink:        #FFFFFF;
+  --c-on-ink-muted:  #B9B9B5;  /* secundario sobre tinta — 9.6:1 */
+
+  /* ---- Tipografía ----------------------------------------------------- */
+  --font-sans: "Hanken Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --w-light:   300;
+  --w-regular: 400;
+  --w-medium:  500;
+
+  /* escala: 11 · 14 · 16 · 28 · 56 (40 solo en la variante de nombre largo) */
+  --t-display:      var(--w-light)   56px/56px var(--font-sans);  /* nombre del restaurante */
+  --t-display-wide: var(--w-light)   40px/44px var(--font-sans);  /* nombre largo, a dos columnas */
+  --t-title:        var(--w-light)   28px/32px var(--font-sans);  /* secciones, nombre del platillo abierto */
+  --t-lead:         var(--w-regular) 16px/24px var(--font-sans);  /* nombres, precios, acciones */
+  --t-body:         var(--w-regular) 14px/20px var(--font-sans);  /* descripciones, navegación */
+  --t-label:        var(--w-medium)  11px/16px var(--font-sans);  /* etiquetas en versales */
+
+  --ls-display:      -0.04em;
+  --ls-display-wide: -0.03em;
+  --ls-title:        -0.02em;
+  --ls-lead:         -0.01em;
+  --ls-body:          0;
+  --ls-label:         0.14em;
+
+  /* ---- Espacio (retícula de 4px) -------------------------------------- */
+  --s-1:   4px;
+  --s-2:   8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  20px;
+  --s-6:  24px;
+  --s-7:  28px;
+  --s-8:  32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-14: 56px;
+
+  /* ---- Retícula de página: 390 = 24 + 163 + 16 + 163 + 24 ------------- */
+  --page:    480px;        /* ancho máximo; el diseño está afinado a 390 */
+  --margin:   24px;
+  --gutter:   16px;
+  --cols:    minmax(0, 1fr) minmax(0, 1fr);  /* dos columnas: 163 + 163 a 390 */
+
+  /* ---- Lámina: una sola foto, tres tamaños ---------------------------- */
+  --plate:        163 / 204;  /* vertical 4:5, una columna */
+  --plate-spread: 171 / 136;  /* abierta 5:4 a dos columnas: 342 × 272 exactos */
+  --plate-open:   5 / 4;      /* abierta y a sangre en el platillo: 390 × 312 */
+  --thumb:        72px;       /* miniatura cuadrada de los renglones */
+  --grade:        saturate(.9) contrast(1.02);  /* etalonaje común: todas las fotos, una misma cocina */
+
+  /* ---- Radios: un solo sistema ---------------------------------------- */
+  --r-sharp: 2px;    /* fotos, botones, controles, barra */
+  --r-round: 999px;  /* solo puntos y radios de selección */
+
+  /* ---- Elevación: no hay sombras; la profundidad es un filete --------- */
+  --shadow-none:    none;
+  --shadow-dock:    0 -1px 0 var(--c-line);              /* borde superior del muelle fijo */
+  --shadow-rule:    inset 0 -1px 0 var(--c-line);        /* filete inferior sin sumar a la medida */
+  --shadow-control: inset 0 0 0 1px var(--c-control);    /* contorno de control sin sumar a la medida */
+  --shadow-frame:   inset 0 0 0 1px rgb(17 17 17 / .08); /* canto de la lámina: define las fotos de fondo blanco */
+
+  /* ---- Controles ------------------------------------------------------ */
+  --touch:   44px;   /* área táctil mínima */
+  --control: 32px;   /* cuerpo visible de los botones pequeños */
+  --bar:     52px;   /* altura de la acción principal */
+  --stroke:  1.5px;  /* grosor único de iconos */
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-ink);
+  font: var(--t-body);
+  font-feature-settings: "kern", "liga";
+  font-variant-numeric: lining-nums tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, p, ul, ol, dl, dd, dt, figure { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+a { color: inherit; text-decoration: none; }
+img { display: block; width: 100%; height: 100%; object-fit: cover; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+
+:focus-visible {
+  outline: 2px solid var(--c-ink);
+  outline-offset: 2px;
+}
+
+.page {
+  width: 100%;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 0 var(--margin);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- Iconos: un solo trazo --------------------------------------------- */
+.icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--stroke);
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+.icon--sm { width: 16px; height: 16px; }
+
+/* ---- Tipos ------------------------------------------------------------- */
+.label {
+  font: var(--t-label);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+.label--ink { color: var(--c-ink); }
+.label--end { margin-right: calc(var(--ls-label) * -1); } /* alineada a la derecha: descuenta el espaciado tras la última letra */
+
+.price {
+  font: var(--t-lead);
+  font-weight: var(--w-light);
+  letter-spacing: var(--ls-lead);
+  white-space: nowrap;
+}
+
+/* ---- Puntos ------------------------------------------------------------ */
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-round);
+  flex: none;
+}
+.dot--brand { background: var(--c-brand); }                         /* brasa: la única marca gráfica */
+.dot--on    { background: var(--c-ink); }                           /* estado: abierto */
+.dot--off   { box-shadow: inset 0 0 0 1px var(--c-muted); }         /* estado: cerrado (aro hueco, texto en gris) */
+
+/* ---- Lámina ------------------------------------------------------------ */
+.plate-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: var(--plate);
+  border-radius: var(--r-sharp);
+  overflow: hidden;
+  background: var(--c-panel);
+}
+.plate-frame::after { /* canto: un filete al 8 % de tinta para que el blanco de la foto no se funda con la página */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--shadow-frame);
+  pointer-events: none;
+}
+.plate-frame img,
+.hero img { filter: var(--grade); }
+
+/* encuadres: el punto de interés de cada foto dentro de su lámina.
+   Ninguno amplía la foto por encima de su resolución nativa a 2x. */
+.crop-room    { transform: scale(1.04); transform-origin: 100% 100%; object-position: 100% 50%; } /* campanas, barra y mesa puesta */
+.crop-macro   { transform: scale(1.4);  transform-origin: 22% 38%; }
+.crop-tacos   { transform: scale(1.45); transform-origin: 47% 60%; }  /* solo el plato: fuera mesa y servilleta */
+.crop-right-s { object-position: 68% 50%; }
+.crop-jars    { transform: scale(1.2);  transform-origin: 62% 78%; }
+.crop-coupe   { transform: scale(2.65); transform-origin: 71% 21%; }  /* una sola copa contra el fondo oscuro */
+.crop-glass   { transform: scale(1.4);  transform-origin: 57% 68%; }
+.crop-tall    { transform: scale(1.3);  transform-origin: 48% 37%; }
+
+/* ==========================================================================
+   Menú — cabecera
+   ========================================================================== */
+
+.masthead { padding-top: var(--s-2); }
+
+.masthead__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--touch);
+}
+
+/* logotipo opcional del restaurante: ocupa el lugar de la etiqueta */
+.masthead__logo {
+  display: block;
+  width: auto;
+  max-width: 120px;
+  height: var(--control);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch);
+  height: var(--touch);
+  margin-right: -14px; /* el glifo, no la caja, toca el margen */
+}
+
+.masthead__grid {
+  display: grid;
+  grid-template-columns: var(--cols);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "name  photo"
+    "facts photo";
+  column-gap: var(--gutter);
+  margin-top: var(--s-3);
+}
+.masthead__grid > .display     { grid-area: name; }
+.masthead__grid > .facts       { grid-area: facts; align-self: end; margin-bottom: -9px; } /* la última línea de base asienta en el borde inferior de la lámina */
+.masthead__grid > .plate-frame { grid-area: photo; }
+.masthead__note { display: none; }
+
+.display {
+  font: var(--t-display);
+  letter-spacing: var(--ls-display);
+  margin: -8px 0 0 -5px; /* la altura de versal toca el borde de la lámina; el asta toca el margen */
+}
+
+/* nombre largo (una palabra de más de 7 letras o más de dos palabras):
+   el nombre toma las dos columnas; la etiqueta, los datos y la lámina forman la fila de abajo */
+.masthead__grid:has(> .display--wide) {
+  grid-template-areas:
+    "name  name"
+    "facts photo";
+}
+.display--wide {
+  font: var(--t-display-wide);
+  letter-spacing: var(--ls-display-wide);
+  margin: 0 0 var(--s-4) -2px;
+  text-wrap: balance;
+}
+.masthead__grid:has(> .display--wide) > .masthead__note {
+  display: block;
+  grid-area: facts;
+  align-self: start;
+  margin-top: -3px; /* la versal de la etiqueta toca el borde superior de la lámina */
+}
+
+.facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  height: var(--s-6);
+}
+.facts dt {
+  font: var(--t-label);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+.facts dd {
+  font: var(--t-body);
+  color: var(--c-ink);
+}
+.facts .dot {
+  margin-right: var(--s-2);
+  vertical-align: 2px; /* centrado en la altura de x */
+}
+.facts .is-off { color: var(--c-muted); }
+
+/* la misma ficha, en línea: datos del platillo abierto */
+.facts--inline {
+  display: flex;
+  column-gap: var(--s-6);
+}
+.facts--inline > div {
+  justify-content: flex-start;
+  column-gap: var(--s-2);
+}
+
+/* ==========================================================================
+   Menú — navegación de categorías
+   ========================================================================== */
+
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: var(--s-4) calc(var(--margin) * -1) 0;
+  padding: 0 var(--margin);
+  background: var(--c-bg);
+}
+.tabs ul {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  /* el filete va por dentro: si hay más categorías la fila se desliza sin recortar la línea activa */
+  background: linear-gradient(var(--c-line), var(--c-line)) left bottom / 100% 1px no-repeat;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs ul::-webkit-scrollbar { display: none; }
+.tabs li { flex: none; }
+.tabs a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--s-12);
+  font: var(--t-body);
+  color: var(--c-muted);
+  white-space: nowrap;
+}
+.tabs a::before { /* área táctil: al menos 44 de ancho */
+  content: "";
+  position: absolute;
+  inset: 0 -6px;
+}
+.tabs a[aria-current="true"] {
+  color: var(--c-ink);
+  font-weight: var(--w-medium);
+}
+.tabs a[aria-current="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--c-brand);
+}
+.tabs a:focus-visible { outline-offset: -2px; }
+
+/* ==========================================================================
+   Menú — secciones
+   ========================================================================== */
+
+.section { padding-top: var(--s-7); scroll-margin-top: var(--s-12); }
+.section + .section { padding-top: var(--s-14); }
+
+.section__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--c-ink);
+  font: var(--t-title);
+  letter-spacing: var(--ls-title);
+}
+.section__no { color: var(--c-muted); }
+.section__title { font: inherit; letter-spacing: inherit; }
+
+/* ---- Láminas: retícula de dos columnas --------------------------------- */
+.plates {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: var(--gutter);
+  row-gap: var(--s-8);
+  padding-top: var(--s-4);
+}
+
+.plate {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.plate__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding-top: var(--s-3);
+}
+.plate__name {
+  font: var(--t-lead);
+  letter-spacing: var(--ls-lead);
+}
+.plate__desc {
+  margin-top: var(--s-1);
+  font: var(--t-body);
+  color: var(--c-muted);
+  text-wrap: balance;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.plate__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: calc(var(--control) + var(--s-3));
+  margin-top: auto;      /* los pies de una misma fila asientan a la misma altura */
+  padding-top: var(--s-3);
+}
+
+/* ---- Lámina abierta: el platillo de la casa, una por sección como máximo */
+.plate--spread { grid-column: 1 / -1; }
+.plate--spread .plate-frame { aspect-ratio: var(--plate-spread); }
+.plate--spread .plate__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--gutter);
+  align-items: center;
+}
+.plate--spread .plate__name,
+.plate--spread .plate__desc { grid-column: 1; }
+.plate--spread .plate__desc { max-width: 28ch; }
+.plate--spread .plate__foot {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  gap: var(--s-4);
+}
+
+/* ---- Renglones: la lista densa (bebidas, secciones largas, platillos sin foto) */
+.rows { padding-top: var(--s-1); }
+
+.row {
+  display: grid;
+  grid-template-columns: var(--thumb) minmax(0, 1fr) auto;
+  column-gap: var(--s-4);
+  align-items: center;
+  min-height: calc(var(--thumb) + var(--s-6));
+  padding: var(--s-3) 0;
+  box-shadow: var(--shadow-rule);
+}
+.row:last-child { box-shadow: none; }
+.row .plate-frame { aspect-ratio: 1; }
+.row .plate__desc { display: block; white-space: nowrap; text-overflow: ellipsis; } /* una línea */
+.row__end {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+.row--plain { grid-template-columns: minmax(0, 1fr) auto; } /* sin foto: el texto arranca en el margen */
+
+/* ---- Agregar: cuadro de 32 con área táctil de 44 ----------------------- */
+.add {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control);
+  height: var(--control);
+  border-radius: var(--r-sharp);
+  box-shadow: var(--shadow-control);
+}
+.add::after,
+.stepper__btn::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+/* ---- Contador: el mismo cuadro, lleno de tinta ------------------------- */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control);
+  border-radius: var(--r-sharp);
+  background: var(--c-ink);
+  color: var(--c-on-ink);
+}
+.stepper__btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control);
+  height: var(--control);
+}
+.stepper__btn:focus-visible { outline-color: var(--c-on-ink); outline-offset: -4px; }
+.stepper__qty {
+  min-width: var(--s-6);
+  text-align: center;
+  font: var(--t-body);
+  font-weight: var(--w-medium);
+}
+
+.colophon {
+  margin-top: var(--s-12);
+  padding-bottom: var(--s-8);
+  font: var(--t-label);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+/* ==========================================================================
+   Muelle fijo: barra del pedido / acción principal
+   ========================================================================== */
+
+.has-dock { padding-bottom: calc(var(--bar) + var(--s-6)); } /* alto del muelle */
+
+.dock {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  max-width: var(--page);
+  transform: translateX(-50%);
+  padding: var(--s-3) var(--margin) calc(var(--s-3) + env(safe-area-inset-bottom, 0px));
+  background: var(--c-bg);
+  box-shadow: var(--shadow-dock);
+}
+
+.cartbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--bar);
+  padding: 0 var(--s-4);
+  border-radius: var(--r-sharp);
+  background: var(--c-ink);
+  color: var(--c-on-ink);
+  font: var(--t-body);
+}
+.cartbar__lead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.cartbar__count { color: var(--c-on-ink-muted); }
+.cartbar__go {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  font-weight: var(--w-medium);
+}
+.cartbar strong { font-weight: var(--w-medium); }
+
+/* ==========================================================================
+   Platillo abierto
+   ========================================================================== */
+
+/* la lámina se abre: mismo 4:5, girado a 5:4 y a sangre */
+.hero {
+  position: relative;
+  width: 100%;
+  max-width: var(--page);
+  aspect-ratio: var(--plate-open);
+  margin: 0 auto;
+  background: var(--c-panel);
+}
+.hero__back {
+  position: absolute;
+  top: var(--s-4);
+  left: var(--margin);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch);
+  height: var(--touch);
+  border-radius: var(--r-sharp);
+  background: var(--c-bg);
+  color: var(--c-ink);
+}
+
+.open__head { padding: var(--s-6) 0; }
+.open__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-top: var(--s-2);
+}
+.open__title h1 {
+  font: var(--t-title);
+  letter-spacing: var(--ls-title);
+  margin-left: -1px;
+  text-wrap: balance;
+}
+.open__desc {
+  margin-top: var(--s-2);
+  font: var(--t-body);
+  color: var(--c-muted);
+  text-wrap: pretty;
+}
+.open__head .facts { margin-top: var(--s-3); }
+
+/* ---- Grupos de opciones: numerados como las secciones del menú ---------- */
+.groups { counter-reset: group; }
+.group + .group { margin-top: var(--s-6); }
+.group__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--c-ink);
+}
+.group__title {
+  font: var(--t-lead);
+  letter-spacing: var(--ls-lead);
+}
+.group__title::before {
+  counter-increment: group;
+  content: counter(group, decimal-leading-zero);
+  margin-right: var(--s-2);
+  color: var(--c-muted);
+  font-weight: var(--w-light);
+}
+
+/* elección única sobre una escala: segmentos */
+.segments {
+  display: flex;
+  margin-top: var(--s-3);
+  border-radius: var(--r-sharp);
+  box-shadow: var(--shadow-control); /* contorno por dentro: la caja mide 44 exactos */
+}
+.segment {
+  flex: 1 1 auto;
+  position: relative;
+  cursor: pointer;
+}
+.segment + .segment::before { /* divisor: filete, no contorno */
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1px;
+  bottom: 1px;
+  width: 1px;
+  background: var(--c-line);
+}
+.segment:has(input:checked)::before,
+.segment:has(input:checked) + .segment::before { display: none; }
+.segment span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--touch);
+  padding: 0 var(--s-2);
+  font: var(--t-body);
+  white-space: nowrap;
+}
+.segment input:checked + span {
+  border-radius: var(--r-sharp);
+  background: var(--c-ink);
+  color: var(--c-on-ink);
+  font-weight: var(--w-medium);
+}
+.segment input:focus-visible + span {
+  outline: 2px solid var(--c-ink);
+  outline-offset: -4px;
+}
+.segment input:checked:focus-visible + span { outline-color: var(--c-on-ink); }
+
+/* elección en lista: renglones con filete */
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  height: var(--touch);
+  box-shadow: var(--shadow-rule);
+  font: var(--t-body);
+  cursor: pointer;
+}
+.options li:last-child .option { box-shadow: none; }
+.option:has(input:focus-visible) {
+  outline: 2px solid var(--c-ink);
+  outline-offset: 2px;
+}
+.option__name { flex: 1; }
+.option__delta { font-weight: var(--w-light); }
+.option__delta--none { color: var(--c-muted); font-weight: var(--w-regular); }
+.radio {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 1px solid var(--c-control);
+  border-radius: var(--r-round);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.option input:checked ~ .radio { border-color: var(--c-ink); }
+.option input:checked ~ .radio::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-round);
+  background: var(--c-ink);
+}
+
+/* ---- Muelle del platillo: cantidad + acción principal ------------------ */
+.order {
+  display: flex;
+  gap: var(--s-4);
+}
+.qty {
+  display: flex;
+  align-items: center;
+  flex: none;
+  width: calc(var(--touch) * 3);
+  height: var(--bar);
+  border-radius: var(--r-sharp);
+  box-shadow: var(--shadow-control);
+}
+.qty__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch);
+  height: 100%;
+}
+.qty__btn:focus-visible { outline-offset: -4px; }
+.qty__n {
+  flex: 1;
+  text-align: center;
+  font: var(--t-lead);
+}
+.cta {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--bar);
+  border-radius: var(--r-sharp);
+  background: var(--c-brand);
+  color: var(--c-on-ink);
+  font: var(--t-lead);
+  font-weight: var(--w-medium);
+  letter-spacing: var(--ls-lead);
+  white-space: pre;
+}
+
+/* total vivo sin JavaScript: el importe sigue a la opción con sobreprecio.
+   En producción lo calcula la app; aquí basta para que el botón no mienta. */
+.total__plus { display: none; }
+body:has(input[data-delta]:checked) .total__base { display: none; }
+body:has(input[data-delta]:checked) .total__plus { display: inline; }
