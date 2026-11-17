@@ -17,3 +17,6 @@ dump.rdb
 
 # Base de datos embebida del servidor local
 .data/
+
+# El zip con todos los APK pasa de 100 MB (limite de GitHub por archivo); se entrega aparte.
+dist/restaurantes-apks.zip
