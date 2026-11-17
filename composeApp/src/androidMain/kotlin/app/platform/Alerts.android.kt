@@ -49,7 +49,9 @@ private fun refreshAlertService(context: Context) {
         if (needed) {
             if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
         } else {
-            context.stopService(intent)
+            // No se llama a stopService: si hay un arranque en curso, Android cerraría la app. El servicio se detiene
+            // solo (si aún no existe, su arranque pendiente lee las preferencias vacías y se apaga).
+            OrderAlertService.instance?.stopFromApp()
         }
     }
 }

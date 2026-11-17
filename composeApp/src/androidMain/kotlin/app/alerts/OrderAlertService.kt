@@ -36,8 +36,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.TimeUnit
 
 /** Lo que el servicio debe escuchar; lo escribe la app (ver Alerts.android.kt). */
 internal object AlertPrefs {
@@ -46,6 +49,7 @@ internal object AlertPrefs {
     const val TOKEN = "token"            // sesión de personal: escuchar pedidos nuevos del restaurante
     const val ORDER_ID = "order_id"      // comensal: seguir el estado de este pedido
     const val ORDER_NUMBER = "order_number"
+    const val ORDER_SEEN = "order_seen"   // "<orderId>:<estado>" del último estado visto (para avisar solo cambios)
 }
 
 /** Evita avisar dos veces lo mismo (la pantalla abierta y el servicio escuchan el mismo evento). */
@@ -70,7 +74,14 @@ internal object AlertDedup {
 class OrderAlertService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val main = Handler(Looper.getMainLooper())
-    private val client by lazy { HttpClient(OkHttp) { install(WebSockets) } }
+    // Ping cada 20 s: sin él, una conexión que muere en silencio (cambio de Wi-Fi) nunca se detecta ni se reintenta.
+    private val client by lazy {
+        HttpClient(OkHttp) {
+            engine { config { pingInterval(20, TimeUnit.SECONDS) } }
+            install(WebSockets)
+        }
+    }
+    private var lastStartId = 0
 
     private var kitchenJob: Job? = null
     private var kitchenKey: String? = null
@@ -79,6 +90,18 @@ class OrderAlertService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onCreate() {
+        super.onCreate()
+        // Si Android recrea solo el servicio (sin actividad), notifyUser necesita este contexto para sonar y avisar.
+        if (app.platform.AndroidPlatform.appContext == null) app.platform.AndroidPlatform.appContext = applicationContext
+        instance = this
+    }
+
+    /** La app pide detenerlo: se hace desde el propio servicio para no chocar con un arranque en curso. */
+    fun stopFromApp() {
+        main.post { stopEverything() }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val prefs = getSharedPreferences(AlertPrefs.FILE, Context.MODE_PRIVATE)
         val base = prefs.getString(AlertPrefs.BASE, null)
@@ -86,8 +109,14 @@ class OrderAlertService : Service() {
         val orderId = prefs.getString(AlertPrefs.ORDER_ID, null)
         val orderNumber = prefs.getString(AlertPrefs.ORDER_NUMBER, null)
 
-        // Obligatorio: pasar a primer plano de inmediato tras startForegroundService().
-        startInForeground(statusText(token != null, orderId != null, orderNumber))
+        lastStartId = startId
+        // Obligatorio: pasar a primer plano de inmediato tras startForegroundService(). Si el sistema no lo
+        // permite (reinicio en segundo plano en Android 12+), se detiene sin tumbar la app.
+        val foreground = runCatching { startInForeground(statusText(token != null, orderId != null, orderNumber)) }.isSuccess
+        if (!foreground) {
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
 
         if (base == null || (token == null && orderId == null)) {
             stopEverything()
@@ -104,12 +133,22 @@ class OrderAlertService : Service() {
         if (newOrderKey != orderKey) {
             orderJob?.cancel()
             orderKey = newOrderKey
-            orderJob = if (orderId != null) scope.launch { listenOrder(base, orderId) } else null
+            orderJob = if (orderId != null) {
+                scope.launch {
+                    // Un pedido que nunca se cierra no debe dejar el servicio encendido para siempre.
+                    val timedOut = withTimeoutOrNull(MAX_ORDER_TRACKING_MS) { listenOrder(base, orderId) } == null
+                    if (timedOut) main.post { if (orderKey == newOrderKey) stopTrackingOrder() }
+                }
+            } else {
+                null
+            }
         }
         return START_STICKY
     }
 
     override fun onDestroy() {
+        instance = null
+        main.removeCallbacksAndMessages(null)
         scope.cancel()
         runCatching { client.close() }
         super.onDestroy()
@@ -119,7 +158,16 @@ class OrderAlertService : Service() {
         kitchenJob?.cancel(); kitchenJob = null; kitchenKey = null
         orderJob?.cancel(); orderJob = null; orderKey = null
         if (Build.VERSION.SDK_INT >= 24) stopForeground(STOP_FOREGROUND_REMOVE) else @Suppress("DEPRECATION") stopForeground(true)
-        stopSelf()
+        // Solo se detiene si no hay un arranque más reciente pendiente (evita cerrar un servicio recién pedido).
+        stopSelf(lastStartId)
+    }
+
+    /** Deja de seguir el pedido del comensal; apaga el servicio si no queda nada que escuchar. */
+    private fun stopTrackingOrder() {
+        getSharedPreferences(AlertPrefs.FILE, Context.MODE_PRIVATE).edit()
+            .remove(AlertPrefs.ORDER_ID).remove(AlertPrefs.ORDER_NUMBER).remove(AlertPrefs.ORDER_SEEN).apply()
+        orderJob?.cancel(); orderJob = null; orderKey = null
+        if (kitchenJob == null) stopEverything() else updateStatus(statusText(true, false, null))
     }
 
     // ── Conexiones
@@ -134,18 +182,21 @@ class OrderAlertService : Service() {
     private suspend fun keepListening(url: String, onText: (String) -> Unit) {
         var backoff = 1_000L
         while (currentCoroutineContext().isActive) {
+            val startedAt = System.currentTimeMillis()
             try {
                 client.webSocket(urlString = url) {
-                    backoff = 1_000L
                     for (frame in incoming) {
                         if (frame is Frame.Text) onText(frame.readText())
                     }
                 }
             } catch (ce: CancellationException) {
-                throw ce
+                // Solo termina si cancelaron al servicio; si fue el servidor quien cerró, se reintenta.
+                currentCoroutineContext().ensureActive()
             } catch (_: Throwable) {
                 // Sin red o servidor apagado: se reintenta.
             }
+            // La espera solo vuelve a 1 s si la conexión duró de verdad (un rechazo inmediato no reintenta cada segundo).
+            if (System.currentTimeMillis() - startedAt > 10_000L) backoff = 1_000L
             delay(backoff)
             backoff = (backoff * 2).coerceAtMost(15_000L)
         }
@@ -184,21 +235,28 @@ class OrderAlertService : Service() {
     }
 
     private fun alertOrderStatus(order: Order) {
+        // El servidor manda el estado actual al conectar: se avisa solo cuando cambia respecto al último visto.
+        val prefs = getSharedPreferences(AlertPrefs.FILE, Context.MODE_PRIVATE)
+        val seen = "${order.id}:${order.status.name}"
+        val previous = prefs.getString(AlertPrefs.ORDER_SEEN, null)
+        prefs.edit().putString(AlertPrefs.ORDER_SEEN, seen).apply()
+        val changed = previous != null && previous.startsWith("${order.id}:") && previous != seen
+
         val key = "st:${order.id}:${order.status}"
-        when (order.status) {
-            OrderStatus.PREPARING -> main.post { notifyUser(NotifyKind.ORDER_UPDATE, "Pedido ${order.number}", "Ya lo estamos preparando.", key) }
-            OrderStatus.READY -> main.post { notifyUser(NotifyKind.ORDER_READY, "¡Tu pedido ${order.number} está listo!", "Ya puedes disfrutarlo.", key) }
-            OrderStatus.COMPLETED -> main.post { notifyUser(NotifyKind.ORDER_UPDATE, "Pedido ${order.number} entregado", "¡Buen provecho!", key) }
-            else -> Unit
+        if (changed) {
+            when (order.status) {
+                OrderStatus.PREPARING -> main.post { notifyUser(NotifyKind.ORDER_UPDATE, "Pedido ${order.number}", "Ya lo estamos preparando.", key) }
+                OrderStatus.READY -> main.post { notifyUser(NotifyKind.ORDER_READY, "¡Tu pedido ${order.number} está listo!", "Ya puedes disfrutarlo.", key) }
+                OrderStatus.COMPLETED -> main.post { notifyUser(NotifyKind.ORDER_UPDATE, "Pedido ${order.number} entregado", "¡Buen provecho!", key) }
+                else -> Unit
+            }
         }
         val closed = order.status == OrderStatus.COMPLETED || order.status == OrderStatus.CANCELLED || order.status == OrderStatus.REFUNDED
         main.post {
+            // Ignora un evento atrasado de un pedido que ya no es el que se sigue.
+            if (orderKey?.endsWith("|${order.id}") != true) return@post
             if (closed) {
-                // El pedido terminó: deja de seguirlo y apaga el servicio si no hay nada más que escuchar.
-                getSharedPreferences(AlertPrefs.FILE, Context.MODE_PRIVATE).edit()
-                    .remove(AlertPrefs.ORDER_ID).remove(AlertPrefs.ORDER_NUMBER).apply()
-                orderJob?.cancel(); orderJob = null; orderKey = null
-                if (kitchenJob == null) stopEverything() else updateStatus(statusText(true, false, null))
+                stopTrackingOrder()
             } else {
                 updateStatus(statusText(kitchenJob != null, true, "${order.number} · ${order.status.label()}"))
             }
@@ -255,8 +313,13 @@ class OrderAlertService : Service() {
         }
     }
 
-    private companion object {
-        const val STATUS_CHANNEL = "conexion_tiempo_real"
-        const val STATUS_ID = 42
+    internal companion object {
+        private const val STATUS_CHANNEL = "conexion_tiempo_real"
+        private const val STATUS_ID = 42
+        private const val MAX_ORDER_TRACKING_MS = 3 * 60 * 60_000L
+
+        /** Servicio vivo en este proceso (para pedirle que se detenga sin llamar a stopService desde fuera). */
+        @Volatile
+        var instance: OrderAlertService? = null
     }
 }

@@ -7,6 +7,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import com.whitelabel.restaurantes.R
@@ -32,7 +34,13 @@ private fun playSound(context: Context, kind: NotifyKind) {
         NotifyKind.ORDER_READY -> R.raw.pedido_listo
         NotifyKind.ORDER_UPDATE -> R.raw.pedido_aviso
     }
-    val player = MediaPlayer.create(context, sound) ?: return
+    // Cocina: se oye aunque el volumen multimedia esté en cero (uso de alarma). Comensal: respeta el modo silencio.
+    val attributes = AudioAttributes.Builder()
+        .setUsage(if (kind == NotifyKind.NEW_ORDER) AudioAttributes.USAGE_ALARM else AudioAttributes.USAGE_NOTIFICATION_EVENT)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build()
+    val session = (context.getSystemService(Context.AUDIO_SERVICE) as AudioManager).generateAudioSessionId()
+    val player = MediaPlayer.create(context, sound, attributes, session) ?: return
     player.setOnCompletionListener { it.release() }
     player.start()
 }
