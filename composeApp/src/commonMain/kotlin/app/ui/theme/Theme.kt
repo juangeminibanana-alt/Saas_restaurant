@@ -49,26 +49,26 @@ import org.jetbrains.compose.resources.Font
 
 // ───────────────────────── Paletas base ─────────────────────────
 
-private val InkLight = Color(0xFF15140F)
-private val InkDark = Color(0xFFF5F4EF)
+private val InkLight = Color(0xFF0B0B0F)
+private val InkDark = Color(0xFFF5F5F7)
 
 private fun lightPalette(brandPrimary: Color?): AppColors {
     val surface = Color(0xFFFFFFFF)
-    var primary = brandPrimary ?: InkLight
+    var primary = brandPrimary ?: Color(0xFFFF5B2E) // acento por defecto de la plataforma (Obsidiana)
     // Un color de marca casi blanco no se vería sobre papel: se oscurece lo justo.
     if (primary.luminance() > 0.78f) {
         var t = 0f
         while (t < 1f && lerp(primary, InkLight, t).luminance() > 0.6f) t += 0.05f
         primary = lerp(primary, InkLight, t)
     }
-    val success = Color(0xFF1E8E5A)
-    val warning = Color(0xFFB7791F)
-    val danger = Color(0xFFC4372B)
-    val info = Color(0xFF2B6CB0)
+    val success = Color(0xFF0F9D6B)
+    val warning = Color(0xFFB45309)
+    val danger = Color(0xFFDC2626)
+    val info = Color(0xFF2563EB)
     return AppColors(
-        canvas = Color(0xFFFAF9F6), surface = surface, surfaceRaised = Color(0xFFFFFFFF), surfaceSunken = Color(0xFFF2F1EC),
-        line = Color(0xFFE7E5DF), lineStrong = Color(0xFFD3D0C7),
-        ink = InkLight, inkMuted = Color(0xFF57554D), inkSubtle = Color(0xFF8C897F),
+        canvas = Color(0xFFF7F7F5), surface = surface, surfaceRaised = Color(0xFFFFFFFF), surfaceSunken = Color(0xFFEDEDEA),
+        line = Color(0xFFE2E2DD), lineStrong = Color(0xFFC9C9C2),
+        ink = InkLight, inkMuted = Color(0xFF4B4B57), inkSubtle = Color(0xFF6B6B78),
         primary = primary, onPrimary = contentColorOn(primary), primarySoft = primary.copy(alpha = 0.10f).compositeOver(surface),
         success = success, warning = warning, danger = danger, info = info,
         successSoft = success.copy(alpha = 0.11f).compositeOver(surface),
@@ -80,22 +80,22 @@ private fun lightPalette(brandPrimary: Color?): AppColors {
 }
 
 private fun darkPalette(brandPrimary: Color?): AppColors {
-    val surface = Color(0xFF161613)
-    var primary = brandPrimary ?: InkDark
+    val surface = Color(0xFF0E0E13)
+    var primary = brandPrimary ?: Color(0xFFFF5B2E) // acento por defecto de la plataforma (Obsidiana)
     // Un color de marca demasiado oscuro se pierde sobre fondos casi negros: se aclara hasta ser visible.
     if (primary.luminance() < 0.2f) {
         var t = 0f
         while (t < 1f && lerp(primary, Color.White, t).luminance() < 0.2f) t += 0.04f
         primary = lerp(primary, Color.White, t)
     }
-    val success = Color(0xFF4CC38A)
-    val warning = Color(0xFFE3A94A)
-    val danger = Color(0xFFF0736A)
-    val info = Color(0xFF6BA6E8)
+    val success = Color(0xFF34D399)
+    val warning = Color(0xFFFBBF24)
+    val danger = Color(0xFFF87171)
+    val info = Color(0xFF60A5FA)
     return AppColors(
-        canvas = Color(0xFF0D0D0B), surface = surface, surfaceRaised = Color(0xFF1E1E1A), surfaceSunken = Color(0xFF0A0A08),
-        line = Color(0xFF2A2924), lineStrong = Color(0xFF3A3933),
-        ink = InkDark, inkMuted = Color(0xFFB5B2A8), inkSubtle = Color(0xFF7E7B72),
+        canvas = Color(0xFF07070A), surface = surface, surfaceRaised = Color(0xFF15151C), surfaceSunken = Color(0xFF050507),
+        line = Color(0xFF262631), lineStrong = Color(0xFF3A3A48),
+        ink = InkDark, inkMuted = Color(0xFFB4B4C2), inkSubtle = Color(0xFF7C7C8E),
         primary = primary, onPrimary = contentColorOn(primary), primarySoft = primary.copy(alpha = 0.16f).compositeOver(surface),
         success = success, warning = warning, danger = danger, info = info,
         successSoft = success.copy(alpha = 0.16f).compositeOver(surface),
@@ -109,7 +109,7 @@ private fun darkPalette(brandPrimary: Color?): AppColors {
 /** Blanco o casi negro según contraste (blanco mientras cumpla ≥ 3:1, texto en negritas / UI). */
 internal fun contentColorOn(background: Color): Color {
     val contrastWithWhite = 1.05f / (background.luminance() + 0.05f)
-    return if (contrastWithWhite >= 3f) Color.White else InkLight
+    return if (contrastWithWhite >= 4.5f) Color.White else InkLight
 }
 
 // ───────────────────────── Tipografía ─────────────────────────
@@ -247,7 +247,7 @@ fun AppTheme(brand: BrandTheme? = null, content: @Composable () -> Unit) {
     val dark = ThemeController.darkOverride ?: when (brand?.mode) {
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
-        else -> systemDark
+        else -> if (brand == null) true else systemDark // Obsidiana es oscuro primero
     }
     val brandPrimary = remember(brand?.primary) { parseHexColor(brand?.primary) }
     val target = remember(dark, brandPrimary) { if (dark) darkPalette(brandPrimary) else lightPalette(brandPrimary) }
