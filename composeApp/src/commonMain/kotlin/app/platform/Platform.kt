@@ -26,3 +26,9 @@ expect fun saveApiBaseUrl(url: String?)
 /** Botón/gesto "atrás" del sistema (Android). En las demás plataformas no hace nada. */
 @Composable
 expect fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit)
+
+/** Tipo de aviso: cada uno tiene su propio sonido. */
+enum class NotifyKind { NEW_ORDER, ORDER_READY, ORDER_UPDATE }
+
+/** Aviso con sonido propio y notificación del sistema (Android). En las demás plataformas no hace nada todavía. */
+expect fun notifyUser(kind: NotifyKind, title: String, body: String)

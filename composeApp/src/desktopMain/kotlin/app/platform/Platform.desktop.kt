@@ -32,3 +32,6 @@ actual fun saveApiBaseUrl(url: String?) {
 @androidx.compose.runtime.Composable
 actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
 }
+
+actual fun notifyUser(kind: NotifyKind, title: String, body: String) {
+}

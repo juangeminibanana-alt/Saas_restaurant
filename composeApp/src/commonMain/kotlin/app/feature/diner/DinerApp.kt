@@ -198,6 +198,19 @@ private fun DinerContent(state: DinerState, tenant: TenantPublic, onExit: () -> 
         }
     }
 
+    // Sigue el pedido en curso desde cualquier pantalla del menú: así llegan los avisos de "en preparación" y "listo".
+    val trackedOrderId = state.activeOrder?.id
+    LaunchedEffect(trackedOrderId) {
+        val id = trackedOrderId ?: return@LaunchedEffect
+        try {
+            repo.trackOrder(id).collect { updated -> state.recordOrder(updated) }
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (e: Exception) {
+            // Sin conexión momentánea: se conserva el último estado conocido.
+        }
+    }
+
     // "Atrás" del sistema dentro del menú: de carrito, rastreo o historial se vuelve al menú (sin perder el carrito).
     app.platform.PlatformBackHandler(enabled = state.screen != DinerScreen.MENU && state.payPhase == PayPhase.IDLE) {
         state.screen = DinerScreen.MENU

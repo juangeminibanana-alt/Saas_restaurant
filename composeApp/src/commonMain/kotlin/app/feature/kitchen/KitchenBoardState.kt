@@ -5,11 +5,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import app.platform.NotifyKind
+import app.platform.notifyUser
 import app.shared.api.RealtimeEvent
 import app.shared.data.AppRepository
 import app.shared.data.RepositoryException
 import app.shared.model.Order
 import app.shared.model.OrderStatus
+import app.shared.util.label
 import app.shared.util.nowMillis
 import app.ui.components.Toasts
 import app.ui.components.Tone
@@ -207,7 +210,16 @@ internal class KitchenBoardState(
                         repo.kitchenEvents().collect { event ->
                             markLive()
                             when (event) {
-                                is RealtimeEvent.OrderCreated -> merge(event.order)
+                                is RealtimeEvent.OrderCreated -> {
+                                    merge(event.order)
+                                    val o = event.order
+                                    val where = o.tableLabel.ifBlank { o.customerName }.let { if (it.isBlank()) "" else " · $it" }
+                                    notifyUser(
+                                        NotifyKind.NEW_ORDER,
+                                        "Nuevo pedido ${o.number}",
+                                        "${o.type.label()}$where · ${o.lines.sumOf { it.quantity }} platillos",
+                                    )
+                                }
                                 is RealtimeEvent.OrderUpdated -> merge(event.order)
                             }
                         }

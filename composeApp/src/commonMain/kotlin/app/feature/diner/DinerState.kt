@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import app.platform.NotifyKind
+import app.platform.notifyUser
 import app.shared.api.CartLineRequest
 import app.shared.api.CreateOrderRequest
 import app.shared.model.Menu
@@ -13,6 +15,7 @@ import app.shared.model.MenuItem
 import app.shared.model.ModifierGroup
 import app.shared.model.ModifierOption
 import app.shared.model.Order
+import app.shared.model.OrderStatus
 import app.shared.model.OrderType
 import app.shared.model.PaymentMethod
 import app.shared.model.TenantPublic
@@ -204,6 +207,15 @@ class DinerState(val route: DinerRoute) {
     /** Inserta o actualiza el pedido en el historial de la sesión (más reciente primero). */
     fun recordOrder(order: Order) {
         val index = history.indexOfFirst { it.id == order.id }
+        val previous = if (index >= 0) history[index].status else null
+        if (previous != null && previous != order.status) {
+            when (order.status) {
+                OrderStatus.PREPARING -> notifyUser(NotifyKind.ORDER_UPDATE, "Pedido ${order.number}", "Ya lo estamos preparando.")
+                OrderStatus.READY -> notifyUser(NotifyKind.ORDER_READY, "¡Tu pedido ${order.number} está listo!", "Ya puedes disfrutarlo.")
+                OrderStatus.COMPLETED -> notifyUser(NotifyKind.ORDER_UPDATE, "Pedido ${order.number} entregado", "¡Buen provecho!")
+                else -> Unit
+            }
+        }
         if (index >= 0) history[index] = order else history.add(0, order)
         if (activeOrder?.id == order.id) activeOrder = order
         if (pendingOrder?.id == order.id) pendingOrder = order
