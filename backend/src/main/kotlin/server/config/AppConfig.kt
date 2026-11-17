@@ -4,7 +4,8 @@ import java.io.File
 
 /** Configuración del servidor: todo sale de variables de entorno con defaults de desarrollo. */
 object AppConfig {
-    private fun env(name: String): String? = System.getenv(name)?.trim()?.takeIf { it.isNotEmpty() }
+    // Una propiedad de sistema con el mismo nombre gana a la variable de entorno (la usa la base embebida).
+    private fun env(name: String): String? = (System.getProperty(name) ?: System.getenv(name))?.trim()?.takeIf { it.isNotEmpty() }
     private fun env(name: String, default: String): String = env(name) ?: default
 
     val port: Int = env("PORT", "8080").toIntOrNull() ?: 8080

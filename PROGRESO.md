@@ -103,6 +103,17 @@ el historial del comensal se perdía al salir y volver a entrar al menú.
 - Cocina: un pedido nuevo cae al final de "Nuevos" y hay que desplazarse para verlo.
 - Sin ícono de app; la barra de estado puede quedar con íconos oscuros sobre fondo oscuro al cambiar de tema.
 
+## Servidor en una PC sin Docker (agregado a las 02:25 am CDMX)
+
+El backend puede traer su propia base de datos: con `EMBEDDED_DB=true` arranca un PostgreSQL real embebido
+(mismo motor, con row-level security) y, si no hay Redis, usa un bus en memoria. Solo hace falta Java.
+
+- Windows: `powershell -ExecutionPolicy Bypass -File scripts\servidor.ps1` (abre el puerto 8080, muestra la
+  dirección para el engrane de las apps y arranca el servidor). **Sin probar en Windows.**
+- Verificado en Linux en esta sesión: arranca en ~4 s sin Docker ni Redis, migra y siembra, el flujo
+  pedido → pago de prueba → cocina funciona por API, y los datos sobreviven a un reinicio.
+- Docker (`docker compose up -d`) sigue siendo una opción, ya no un requisito.
+
 ## Pendientes conocidos (detalles)
 
 - El menú muestra "Cerrado" fuera del horario del restaurante, pero **aun así deja pedir** (hay un aviso en el carrito).

@@ -43,6 +43,8 @@ import java.io.File
 private val log = LoggerFactory.getLogger("Server")
 
 fun main() {
+    // Con EMBEDDED_DB=true el servidor trae su propia base de datos (sin Docker).
+    server.db.EmbeddedDb.startIfRequested()
     embeddedServer(Netty, port = AppConfig.port, host = "0.0.0.0") { module() }.start(wait = true)
 }
 
