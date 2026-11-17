@@ -11,3 +11,6 @@ local.properties
 xcuserdata/
 *.xcuserstate
 DerivedData/
+
+# Redis local
+dump.rdb
