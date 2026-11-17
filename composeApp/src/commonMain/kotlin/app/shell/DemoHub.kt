@@ -182,8 +182,9 @@ fun DemoSwitcher(navigator: AppNavigator) {
     val colors = AppTheme.colors
     val compact = LocalWindowSize.current == WindowSize.COMPACT
     Box(
-        Modifier.fillMaxSize().padding(Space.x2),
-        contentAlignment = if (compact) Alignment.CenterStart else Alignment.CenterEnd,
+        // En teléfono va abajo a la izquierda, por encima de la barra del carrito; en pantallas anchas, al borde derecho.
+        Modifier.fillMaxSize().padding(start = Space.x2, end = Space.x2, top = Space.x2, bottom = if (compact) 96.dp else Space.x2),
+        contentAlignment = if (compact) Alignment.BottomStart else Alignment.CenterEnd,
     ) {
         Box(
             Modifier.size(36.dp).clip(CircleShape).background(colors.surface.copy(alpha = 0.9f))
