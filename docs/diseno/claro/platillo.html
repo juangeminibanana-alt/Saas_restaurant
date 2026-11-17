@@ -17,13 +17,16 @@
   <symbol id="i-close" viewBox="0 0 20 20"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/></symbol>
   <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 4.5v11M4.5 10h11"/></symbol>
   <symbol id="i-minus" viewBox="0 0 20 20"><path d="M4.5 10h11"/></symbol>
-  <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.75 8.5l2.75 2.75 5.75-6.5"/></symbol>
 </svg>
 
 <main class="page detail">
 
   <div class="media media--hero">
-    <img class="media__photo" src="../fotos/arrachera_papas.jpg" alt="Arrachera rebanada con papas a la francesa y hierbas en plato blanco">
+    <img class="media__photo"
+         src="../fotos/arrachera_papas.jpg"
+         srcset="hd/arrachera_papas-700.jpg 700w, hd/arrachera_papas-1200.jpg 1200w"
+         sizes="(max-width: 480px) 100vw, 480px"
+         alt="Arrachera rebanada con papas a la francesa y hierbas en plato blanco">
     <a class="fab" href="menu.html" aria-label="Cerrar y volver al menú"><svg class="i" aria-hidden="true"><use href="#i-close"/></svg></a>
   </div>
 
@@ -35,7 +38,7 @@
     <fieldset class="group">
       <legend class="group__head">
         <span class="group__title">Término</span>
-        <span class="group__rule group__rule--req">Obligatorio</span>
+        <span class="group__rule">Elige uno</span>
       </legend>
       <div class="seg">
         <input class="sr" type="radio" name="termino" id="t-rojo"><label for="t-rojo">Rojo</label>
@@ -45,28 +48,28 @@
       </div>
     </fieldset>
 
-    <!-- Opcional: casillas, no radios. La guarnición incluida viene marcada y se puede quitar. -->
+    <!-- La guarnición viene incluida: se elige una; la de la foto llega marcada. -->
     <fieldset class="group">
       <legend class="group__head">
         <span class="group__title">Guarnición</span>
-        <span class="group__rule">Opcional</span>
+        <span class="group__rule">Elige una · incluida</span>
       </legend>
       <div class="opts">
         <label class="opt">
-          <input class="sr" type="checkbox" name="guarnicion" value="papas" checked>
+          <input class="sr" type="radio" name="guarnicion" value="papas" checked>
           <span class="opt__name">Papas a la francesa</span>
-          <span class="opt__mark" aria-hidden="true"><svg class="i i--s"><use href="#i-check"/></svg></span>
+          <span class="opt__mark" aria-hidden="true"></span>
         </label>
         <label class="opt">
-          <input class="sr" type="checkbox" name="guarnicion" value="ensalada">
+          <input class="sr" type="radio" name="guarnicion" value="ensalada">
           <span class="opt__name">Ensalada verde</span>
-          <span class="opt__mark" aria-hidden="true"><svg class="i i--s"><use href="#i-check"/></svg></span>
+          <span class="opt__mark" aria-hidden="true"></span>
         </label>
         <label class="opt">
-          <input class="sr" type="checkbox" name="guarnicion" value="esquites">
+          <input class="sr" type="radio" name="guarnicion" value="esquites">
           <span class="opt__name">Esquites</span>
           <span class="opt__delta num">+$25</span>
-          <span class="opt__mark" aria-hidden="true"><svg class="i i--s"><use href="#i-check"/></svg></span>
+          <span class="opt__mark" aria-hidden="true"></span>
         </label>
       </div>
     </fieldset>

@@ -10,12 +10,14 @@
 :root {
   /* Color ---------------------------------------------------------------- */
   --c-canvas: #FFFFFF;         /* lienzo */
-  --c-surface: #F5F5F7;        /* chips en reposo, pistas de control */
+  --c-surface: #F5F5F7;        /* sección neutra de cierre, chips en reposo, pistas de control */
   --c-line: #E3E3E8;           /* filetes entre filas */
+  --c-edge: rgba(10, 10, 10, 0.08);  /* borde de 1 px que sostiene la silueta de una foto clara sobre lienzo blanco */
+  --c-ring: rgba(10, 10, 10, 0.12);  /* aro de 1 px del botón blanco: lo sostiene aunque debajo haya un plato blanco */
   --c-control: #8E8E93;        /* contorno de controles en reposo · 3.3:1 sobre blanco */
   --c-disabled: #C7C7CC;       /* icono de una acción que ahora no puede ocurrir */
   --c-ink: #0A0A0A;            /* texto principal · 19.8:1 sobre blanco */
-  --c-ink-2: #6E6E73;          /* texto secundario · 5.1:1 sobre blanco */
+  --c-ink-2: #6E6E73;          /* texto secundario · 5.1:1 sobre blanco · 4.7:1 sobre la sección neutra */
   --c-accent: #D93A14;         /* brasa (marca del restaurante) · blanco encima 4.6:1 */
   --c-on-accent: #FFFFFF;
   --c-on-ink: #FFFFFF;
@@ -28,10 +30,17 @@
   --t-display-size: 56px;  --t-display-line: 56px;  --t-display-track: -0.045em;  /* nombre del restaurante */
   --t-hero-size: 32px;     --t-hero-line: 36px;     --t-hero-track: -0.035em;     /* nombre del platillo abierto */
   --t-title-size: 28px;    --t-title-line: 32px;    --t-title-track: -0.03em;     /* secciones */
-  --t-head-size: 20px;     --t-head-line: 24px;     --t-head-track: -0.02em;      /* platillo, precio, grupo */
-  --t-body-size: 16px;     --t-body-line: 24px;     --t-body-track: -0.011em;     /* texto, opciones, acciones */
+  --t-head-size: 20px;     --t-head-line: 24px;     --t-head-track: -0.02em;      /* platillo destacado, precio, grupo, firma */
+  --t-body-size: 16px;     --t-body-line: 24px;     --t-body-track: -0.011em;     /* texto, opciones, acciones, platillo en fila */
   --t-small-size: 15px;    --t-small-line: 20px;    --t-small-track: -0.006em;    /* descripciones, chips, datos */
   --t-micro-size: 13px;    --t-micro-line: 16px;    --t-micro-track: 0;           /* reglas de grupo */
+
+  /* Alineación óptica: en los títulos el blanco lateral de la letra se nota.
+     El desplazamiento deja el asta de la inicial sobre el borde que tiene debajo:
+     el margen de fotos y chips (20 px) o, en el platillo abierto, la columna de texto. */
+  --t-display-nudge: -4px;
+  --t-hero-nudge: -1px;
+  --t-title-nudge: -1.5px;
 
   --w-regular: 400;
   --w-medium: 500;
@@ -47,24 +56,36 @@
   --s-6: 24px;
   --s-7: 28px;
   --s-8: 32px;
+  --s-9: 36px;
+  --s-10: 40px;
+  --s-11: 44px;
   --s-12: 48px;
   --gutter: 20px;              /* margen único: texto, tarjetas y controles comparten eje */
 
-  /* Radios — un solo sistema: tarjeta o píldora ---------------------------- */
+  /* Radios — un solo sistema: la foto lleva esquina, lo que se toca es píldora.
+     La esquina se reduce con la foto (28 → 20) para que el gesto sea el mismo. */
   --r-card: 28px;              /* fotografía en tarjeta */
+  --r-thumb: 20px;             /* fotografía en miniatura */
   --r-full: 999px;             /* todo lo que se toca */
 
-  /* Sombra — una sola, solo para lo que flota sobre contenido -------------- */
+  /* Sombra — una sola, de dos capas, solo para lo que flota sobre contenido - */
   --shadow-float: 0 1px 2px rgba(10, 10, 10, 0.10), 0 10px 24px -6px rgba(10, 10, 10, 0.22);
 
-  /* Fotografía — dos papeles, nunca intercambiables -------------------------
+  /* Fotografía — tres papeles, nunca intercambiables ------------------------
      Portada: a sangre, pegada al borde superior, esquinas rectas. Abre pantalla.
-     Tarjeta: dentro del margen, radio 28. Vive en la lista.                  */
-  --hero-h: 300px;             /* portada · 390 × 300, el restaurante o el platillo abierto */
+     Tarjeta: dentro del margen, radio 28. El platillo destacado de la sección.
+     Miniatura: cuadrada, radio 20, a la derecha del texto. El resto de la lista.
+     Cada foto declara su encuadre con un punto focal (--fx, --fy) y un
+     acercamiento (--zoom); el sujeto entero queda dentro del marco.          */
+  --cover-h: 260px;            /* portada del restaurante · 390 × 260 (3:2) */
+  --hero-h: 292px;             /* platillo abierto · 390 × 292 (4:3): la tarjeta, crecida hasta los bordes */
   --photo-h: 264px;            /* tarjeta · 350 × 264 (4:3) */
+  --thumb: 112px;              /* miniatura · 112 × 112 */
 
   /* Medidas ---------------------------------------------------------------- */
+  --page-max: 480px;           /* diseñado a 390; fluido en cualquier teléfono, columna centrada en pantallas anchas */
   --tap: 44px;                 /* objetivo táctil mínimo */
+  --tap-disc: 36px;            /* disco visible del botón sobre miniatura; su área de toque sigue midiendo 44 */
   --action: 56px;              /* acción principal y carrito */
   --stroke: 1.75;              /* grosor único de icono */
 
@@ -81,9 +102,9 @@
 *::after { box-sizing: border-box; }
 
 html {
+  color-scheme: light;
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
-  scroll-padding-top: 40px;    /* las anclas de categoría aterrizan bajo la barra pegada */
 }
 
 body {
@@ -110,7 +131,7 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
 
 :focus-visible { outline: 2px solid var(--c-ink); outline-offset: 2px; }
 
-.page { width: 100%; max-width: 390px; margin: 0 auto; }
+.page { width: 100%; max-width: var(--page-max); margin: 0 auto; }
 
 .num { font-variant-numeric: tabular-nums; }
 
@@ -119,18 +140,18 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
   clip: rect(0 0 0 0); white-space: nowrap;
 }
 
-/* Iconos: un trazo, extremos redondos. Lienzo de 20; el de 16 se dibuja
-   en su propia retícula para que el trazo mida lo mismo. */
+/* Iconos: un lienzo de 20, un trazo, extremos redondos */
 .i {
   width: 20px; height: 20px; flex: none;
   fill: none; stroke: currentColor; stroke-width: var(--stroke);
   stroke-linecap: round; stroke-linejoin: round;
 }
-.i--s { width: 16px; height: 16px; }
+/* La estrella: el mismo trazo, relleno de su propio color; glifo de 12 a escala 1:1 */
+.i--star { width: 12px; height: 12px; fill: currentColor; }
 
 /* Respuesta al toque, igual en todo lo pulsable */
-.fab, .chip, .cart, .cta, .qty button, .stepper button { transition: transform 0.12s ease-out; }
-.fab:active, .chip:active, .cart:active, .cta:active { transform: scale(0.97); }
+.fab, .chip, .deck__search, .cart, .cta, .qty button, .stepper button { transition: transform 0.12s ease-out; }
+.fab:active, .chip:active, .deck__search:active, .cart:active, .cta:active { transform: scale(0.97); }
 .qty button:active, .stepper button:active { transform: scale(0.9); }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -141,47 +162,67 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
    3. Piezas compartidas
    -------------------------------------------------------------------------- */
 
-/* Fotografía en tarjeta: la foto ES la tarjeta, sin marco ni sombra. */
-.media { position: relative; }
+/* Fotografía: la foto ES la tarjeta, sin marco ni sombra. El contenedor
+   recorta; la imagen se encuadra con su punto focal y su acercamiento. */
+.media {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-card);
+  background: var(--c-surface);
+}
 
 .media__photo {
   width: 100%; height: var(--photo-h);
   object-fit: cover;
-  border-radius: var(--r-card);
-  background: var(--c-surface);
+  object-position: var(--fx, 50%) var(--fy, 50%);
+  transform-origin: var(--fx, 50%) var(--fy, 50%);
+  transform: scale(var(--zoom, 1));
 }
 
 /* Filete interior al 8 %: conserva la silueta cuando la foto es clara
    (plato blanco sobre lienzo blanco). No se percibe en fotos oscuras. */
 .media::after {
   content: ""; position: absolute; inset: 0;
-  border-radius: var(--r-card);
-  box-shadow: inset 0 0 0 1px rgba(10, 10, 10, 0.08);
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--c-edge);
   pointer-events: none;
 }
+.media a:focus-visible { outline: none; }
+.media:has(a:focus-visible)::after { box-shadow: inset 0 0 0 2px var(--c-ink); }
 
-/* Fotografía de portada: a sangre y con esquinas rectas. */
-.media--hero .media__photo {
-  height: calc(var(--hero-h) + var(--safe-top));
-  border-radius: 0;
-}
+/* Portada: a sangre y con esquinas rectas. */
+.media--hero { border-radius: 0; }
 .media--hero::after { content: none; }
+.media--hero .media__photo { height: calc(var(--hero-h) + var(--safe-top)); }
+.media--cover .media__photo { height: calc(var(--cover-h) + var(--safe-top)); }
 
-/* Cada foto lleva su acción arriba a la derecha:
-   buscar en la portada, agregar en la tarjeta, cerrar en el platillo. */
+/* Miniatura: cuadrada, a la derecha del texto. */
+.media--thumb { width: var(--thumb); border-radius: var(--r-thumb); }
+.media--thumb .media__photo { height: var(--thumb); }
+
+/* Acción sobre la foto, siempre arriba a la derecha:
+   agregar en tarjeta y miniatura, cerrar en el platillo abierto. */
 .fab,
 .qty {
   position: absolute; top: var(--s-3); right: var(--s-3);
   height: var(--tap);
   border-radius: var(--r-full);
-  box-shadow: var(--shadow-float);
 }
 .fab {
   width: var(--tap);
   display: grid; place-items: center;
-  background: var(--c-canvas);
   color: var(--c-ink);
+  isolation: isolate;                /* el disco queda detrás del icono, no detrás de la foto */
 }
+/* El disco blanco se dibuja aparte del área de toque: en la tarjeta coinciden
+   (44); en la miniatura el disco mide 36 y el área de toque conserva sus 44. */
+.fab::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  border-radius: var(--r-full);
+  background: var(--c-canvas);
+  box-shadow: 0 0 0 1px var(--c-ring), var(--shadow-float);
+}
+
 /* En portada el botón se alinea con el margen de la página, no con la foto */
 .media--hero .fab {
   top: calc(var(--s-4) + var(--safe-top));
@@ -193,8 +234,10 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
   display: flex; align-items: center;
   background: var(--c-accent);
   color: var(--c-on-accent);
+  box-shadow: var(--shadow-float);
 }
 .qty button {
+  position: relative;
   width: var(--tap); height: var(--tap);
   display: grid; place-items: center;
   border-radius: var(--r-full);
@@ -204,17 +247,26 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
   font-weight: var(--w-semibold);
 }
 
+/* En miniatura: disco de 36 a 8 px de la esquina; el toque sigue midiendo 44 */
+.media--thumb .fab { top: var(--s-1); right: var(--s-1); }
+.media--thumb .fab::before { inset: var(--s-1); }
+.media--thumb .qty {
+  top: var(--s-2); right: var(--s-2); left: var(--s-2);
+  height: var(--tap-disc);
+  justify-content: space-between;
+}
+.media--thumb .qty button { width: var(--tap-disc); height: var(--tap-disc); }
+.media--thumb .qty button::after { content: ""; position: absolute; inset: -4px; }
+
 /* --------------------------------------------------------------------------
    4. Menú
    -------------------------------------------------------------------------- */
-.menu { padding-bottom: calc(104px + var(--safe-bottom)); }   /* aire para el carrito flotante */
-
 /* Identidad */
-.hero__id { padding: var(--s-7) var(--gutter) 0; }
+.hero__id { padding: var(--s-11) var(--gutter) 0; }
 
 .hero__name {
-  margin-left: -4px;                 /* alineación óptica: el asta de la B cae sobre el margen */
-  font-size: var(--t-display-size);
+  margin-left: var(--t-display-nudge);
+  font-size: min(var(--t-display-size), 16vw);   /* 56 desde 350 de ancho; en 320 el nombre sigue en una línea */
   line-height: var(--t-display-line);
   letter-spacing: var(--t-display-track);
   word-spacing: 0.04em;              /* devuelve el espacio entre palabras que quita el tracking */
@@ -226,7 +278,7 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
   color: var(--c-ink-2);
 }
 
-/* Una sola línea de datos propios del restaurante; el estado va en palabras */
+/* Una sola línea de datos: calificación, tiempo y estado (el estado, en palabras) */
 .meta {
   display: flex; align-items: center; gap: var(--s-2);
   margin-top: var(--s-3);
@@ -235,19 +287,20 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
   letter-spacing: var(--t-small-track);
   font-weight: var(--w-medium);
 }
-.meta li { display: flex; align-items: center; gap: var(--s-2); }
+.meta li { display: flex; align-items: center; gap: var(--s-2); white-space: nowrap; }
 .meta li + li::before {
   content: ""; width: 3px; height: 3px;
   border-radius: var(--r-full);
   background: var(--c-ink-2);
 }
+.meta__rating { gap: var(--s-1); }
 .meta__closed { color: var(--c-ink-2); }   /* "Cerrado · abre 13:00" */
 
 /* Categorías — se quedan pegadas arriba al desplazar */
 .chips {
   position: sticky; top: 0; z-index: 5;
   display: flex; gap: var(--s-2);
-  margin-top: var(--s-6);
+  margin-top: var(--s-8);
   padding: calc(var(--s-3) + var(--safe-top)) var(--gutter) var(--s-3);
   background: var(--c-canvas);
   overflow-x: auto; scrollbar-width: none;
@@ -275,23 +328,26 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
 }
 
 /* Sección */
-.section { padding: var(--s-6) var(--gutter) 0; }
+.section { padding: var(--s-9) var(--gutter) 0; }
 .section + .section { padding-top: var(--s-12); }
 
 .section__title {
-  margin-left: -2px;                 /* alineación óptica con el margen */
+  margin-left: var(--t-title-nudge);
   font-size: var(--t-title-size);
   line-height: var(--t-title-line);
   letter-spacing: var(--t-title-track);
   word-spacing: 0.06em;
   font-weight: var(--w-bold);
+  scroll-margin-top: 88px;           /* el ancla de categoría aterriza 20 px bajo la barra pegada */
 }
 
-/* Platillo */
+/* Platillo — dos formatos.
+   Destacado: fotografía grande, nombre y precio en una línea. Abre la sección.
+   Fila: texto a la izquierda, miniatura a la derecha. El resto de la lista. */
 .dish { margin-top: var(--s-4); }
 .dish + .dish { margin-top: var(--s-8); }
 
-.dish__row {
+.dish__head {
   display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-4);
   margin-top: var(--s-3);
   font-size: var(--t-head-size);
@@ -309,38 +365,107 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
   color: var(--c-ink-2);
 }
 
-/* Carrito: píldora de tinta, siempre en el mismo sitio que la acción principal */
-.cart {
+.dish--row {
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--thumb);
+  column-gap: var(--s-4); align-items: center;
+}
+.dish--row + .dish--row { margin-top: var(--s-6); }
+.dish--row .dish__name,
+.dish--row .dish__price {
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-line);
+  letter-spacing: var(--t-body-track);
+}
+.dish--row .dish__desc {                 /* dos líneas como máximo, repartidas sin viudas */
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-wrap: balance;
+}
+.dish--row .dish__price { margin-top: var(--s-3); }   /* 24 + 4 + 40 + 12 + 24 = 104: el texto queda centrado a 4 px de los bordes de la miniatura */
+
+/* Cierre: la única sección neutra de la página. El restaurante firma su menú
+   y la banda gris corre por debajo de la barra flotante. */
+.outro {
+  margin-top: var(--s-12);
+  padding: var(--s-8) var(--gutter) calc(120px + var(--safe-bottom));
+  background: var(--c-surface);
+}
+.outro__name {
+  font-size: var(--t-head-size);
+  line-height: var(--t-head-line);
+  letter-spacing: var(--t-head-track);
+  font-weight: var(--w-semibold);
+}
+.outro__info {
+  margin-top: var(--s-2);
+  font-style: normal;
+  font-size: var(--t-small-size);
+  line-height: var(--t-small-line);
+  letter-spacing: var(--t-small-track);
+  color: var(--c-ink-2);
+}
+.outro__info p + p { margin-top: var(--s-1); }
+.outro__tel {
+  display: inline-flex; align-items: center;
+  min-height: var(--tap); margin: -12px 0;     /* 44 de toque en una línea de 20 */
+  color: var(--c-ink);
+  font-weight: var(--w-medium);
+}
+
+/* Barra flotante: buscar + pedido. Tinta sobre cualquier foto, siempre a mano
+   y a la misma altura que la acción principal del platillo abierto. */
+.deck {
   position: fixed; z-index: 10;
   left: 0; right: 0; bottom: calc(var(--s-4) + var(--safe-bottom));
-  width: calc(100% - 2 * var(--gutter)); max-width: 350px;
+  width: calc(100% - 2 * var(--gutter)); max-width: calc(var(--page-max) - 2 * var(--gutter));
   margin: 0 auto;
-  display: flex; align-items: center; justify-content: space-between; gap: var(--s-4);
+  display: flex; gap: var(--s-3);
+  pointer-events: none;              /* el hueco entre los dos botones deja pasar el toque */
+}
+.deck__search,
+.cart {
+  pointer-events: auto;
   height: var(--action);
-  padding: 0 var(--s-6);
   border-radius: var(--r-full);
   background: var(--c-ink);
   color: var(--c-on-ink);
   box-shadow: var(--shadow-float);
 }
-.cart__label { display: flex; align-items: baseline; gap: var(--s-2); }
-.cart__cta { font-weight: var(--w-semibold); }
+.deck__search {
+  flex: none; width: var(--action);
+  display: grid; place-items: center;
+}
+.cart {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-4);
+  padding: 0 var(--s-6);
+}
+.cart__label { display: flex; align-items: baseline; gap: var(--s-2); min-width: 0; }
+.cart__cta { flex: none; font-weight: var(--w-semibold); }
 .cart__count {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: var(--t-small-size);
   letter-spacing: var(--t-small-track);
   color: var(--c-on-ink-2);
 }
-.cart__total { font-weight: var(--w-semibold); }
+.cart__total { flex: none; font-weight: var(--w-semibold); }
+
+/* Teléfonos angostos: la cuenta baja a una segunda línea dentro de la píldora
+   y la línea de datos se queda en lo esencial ("Abierto") */
+@media (max-width: 374px) {
+  .cart__label { flex-direction: column; align-items: flex-start; gap: 0; line-height: var(--t-small-line); }
+  .meta__more { display: none; }
+}
 
 /* --------------------------------------------------------------------------
    5. Platillo abierto
    -------------------------------------------------------------------------- */
-.detail { padding-bottom: calc(96px + var(--safe-bottom)); }   /* 96 = barra de acción + respiro */
+.detail { padding-bottom: calc(88px + var(--safe-bottom)); }   /* 88 = barra de acción (84) + respiro: a 390 × 844 todo cabe sin desplazar */
 
-.detail__body { padding: var(--s-5) var(--gutter) 0; }
+.detail__body { padding: var(--s-7) var(--gutter) 0; }
 
 .detail__name {
-  margin-left: -2px;                 /* alineación óptica con el margen */
+  margin-left: var(--t-hero-nudge);
   font-size: var(--t-hero-size);
   line-height: var(--t-hero-line);
   letter-spacing: var(--t-hero-track);
@@ -379,9 +504,8 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
   font-weight: var(--w-medium);
   color: var(--c-ink-2);
 }
-.group__rule--req { color: var(--c-ink); }
 
-/* Obligatorio, uno de una escala corta: control segmentado */
+/* Uno de una escala corta: control segmentado */
 .seg {
   display: flex;
   margin-top: var(--s-3);
@@ -408,9 +532,11 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
   font-weight: var(--w-semibold);
 }
 .seg input:focus-visible + label { outline: 2px solid var(--c-ink); outline-offset: 2px; }
+@media (max-width: 359px) {            /* 320 de ancho: las cuatro palabras siguen cabiendo en una pista */
+  .seg label { padding: 0 var(--s-1); font-size: var(--t-micro-size); letter-spacing: var(--t-micro-track); }
+}
 
-/* Opcional, con precio: filas que se marcan y se desmarcan.
-   La palomita dice "incluido"; tocarla de nuevo lo quita. */
+/* Una de una lista, con precio: filas. La incluida llega marcada. */
 .opts { margin-top: var(--s-1); }
 .opt {
   display: flex; align-items: center; gap: var(--s-3);
@@ -422,23 +548,18 @@ button { font: inherit; letter-spacing: inherit; color: inherit; background: non
 .opt__delta { color: var(--c-ink-2); }
 .opt__mark {
   width: 24px; height: 24px; flex: none;
-  display: grid; place-items: center;
   border-radius: var(--r-full);
   border: 1.5px solid var(--c-control);
-  color: transparent;
+  background: var(--c-canvas);
 }
-.opt input:checked ~ .opt__mark {
-  border-color: var(--c-accent);
-  background: var(--c-accent);
-  color: var(--c-on-accent);
-}
+.opt input:checked ~ .opt__mark { border: 8px solid var(--c-accent); }
 .opt input:focus-visible ~ .opt__mark { outline: 2px solid var(--c-ink); outline-offset: 2px; }
 
 /* Barra de acción: cantidad + acción principal, a la altura del carrito */
 .bar {
   position: fixed; z-index: 10;
   left: 0; right: 0; bottom: 0;
-  width: 100%; max-width: 390px;
+  width: 100%; max-width: var(--page-max);
   margin: 0 auto;
   display: flex; gap: var(--s-3);
   padding: var(--s-3) var(--gutter) calc(var(--s-4) + var(--safe-bottom));

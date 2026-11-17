@@ -10,28 +10,37 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
-<body class="menu">
+<body>
 
 <!-- Iconos: trazo único de 1.75, extremos redondos -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-search" viewBox="0 0 20 20"><circle cx="9" cy="9" r="5.5"/><path d="M13.25 13.25 17 17"/></symbol>
   <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 4.5v11M4.5 10h11"/></symbol>
   <symbol id="i-minus" viewBox="0 0 20 20"><path d="M4.5 10h11"/></symbol>
+  <symbol id="i-star" viewBox="4 3.75 12 12"><path d="M10.00 5.20 L11.33 8.40 L14.78 8.68 L12.15 10.93 L12.96 14.30 L10.00 12.49 L7.04 14.30 L7.85 10.93 L5.22 8.68 L8.67 8.40Z"/></symbol>
 </svg>
+
+<!-- Fotografía: src apunta a la foto curada (../fotos); srcset sirve la MISMA foto
+     reexportada a mayor resolución (hd/, mismo origen) para pantallas 2x y 3x.
+     Cada imagen declara su encuadre: punto focal (--fx, --fy) y acercamiento (--zoom). -->
 
 <main class="page">
 
   <header class="hero">
-    <div class="media media--hero">
-      <img class="media__photo" src="../fotos/cover_brasa.jpg" alt="Salón de Brasa Demo: mesas de madera, sillas rojizas y campanas de cobre">
-      <button class="fab" type="button" aria-label="Buscar en el menú"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
+    <div class="media media--hero media--cover">
+      <img class="media__photo" style="--fx:78%; --fy:40%; --zoom:2.05"
+           src="../fotos/cover_brasa.jpg"
+           srcset="hd/cover_brasa-1200.jpg 1200w, hd/cover_brasa-1800.jpg 1800w"
+           sizes="(max-width: 480px) 200vw, 960px"
+           alt="Brasa Demo: campanas de cobre sobre la barra y la parrilla, con sillas rojizas al frente">
     </div>
     <div class="hero__id">
       <h1 class="hero__name">Brasa Demo</h1>
       <p class="hero__tag">Parrilla mexicana contemporánea</p>
       <ul class="meta num">
-        <li>Abierto hasta las 23:00</li>
-        <li>Listo en 25–35 min</li>
+        <li class="meta__rating"><svg class="i i--star" aria-hidden="true"><use href="#i-star"/></svg><span><span class="sr">Calificación </span>4.8</span></li>
+        <li>25–35 min</li>
+        <li><span>Abierto<span class="meta__more"> hasta las 23:00</span></span></li>
       </ul>
     </div>
   </header>
@@ -44,120 +53,153 @@
     <a class="chip" href="#bebidas">Bebidas</a>
   </nav>
 
-  <section class="section" id="entradas">
-    <h2 class="section__title">Entradas</h2>
+  <section class="section" aria-labelledby="entradas">
+    <h2 class="section__title" id="entradas">Entradas</h2>
 
-    <!-- Estado "ya agregado": el + se convierte en cantidad -->
+    <!-- Destacado, en estado "ya agregado": el + se convierte en cantidad -->
     <article class="dish">
       <div class="media">
-        <img class="media__photo" src="../fotos/ensalada_aguacate_garbanzo.jpg" alt="Ensalada con aguacate, garbanzo, jitomate cherry y camote">
+        <img class="media__photo"
+             src="../fotos/ensalada_aguacate_garbanzo.jpg"
+             srcset="hd/ensalada_aguacate_garbanzo-700.jpg 700w, hd/ensalada_aguacate_garbanzo-1200.jpg 1200w"
+             sizes="(max-width: 480px) 100vw, 480px"
+             alt="Ensalada con aguacate, garbanzo, jitomate cherry y camote">
         <div class="qty" role="group" aria-label="Ensalada de la huerta en tu pedido">
           <button type="button" aria-label="Quitar uno"><svg class="i" aria-hidden="true"><use href="#i-minus"/></svg></button>
           <output aria-label="1 en tu pedido">1</output>
           <button type="button" aria-label="Agregar uno más"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
         </div>
       </div>
-      <div class="dish__row">
+      <div class="dish__head">
         <h3 class="dish__name">Ensalada de la huerta</h3>
         <span class="dish__price num">$135</span>
       </div>
       <p class="dish__desc">Aguacate, garbanzo, jitomate cherry y camote</p>
     </article>
 
-    <article class="dish">
-      <div class="media">
-        <img class="media__photo" src="../fotos/albondigas_arugula.jpg" alt="Albóndigas doradas sobre arúgula" style="object-position:50% 88%">
+    <!-- Fila: el resto de la sección -->
+    <article class="dish dish--row">
+      <div class="dish__text">
+        <h3 class="dish__name">Albóndigas al carbón</h3>
+        <p class="dish__desc">Doradas a la brasa sobre arúgula fresca</p>
+        <p class="dish__price num">$155</p>
+      </div>
+      <div class="media media--thumb">
+        <img class="media__photo" style="--fy:49%"
+             src="../fotos/albondigas_arugula.jpg"
+             srcset="hd/albondigas_arugula-700.jpg 700w, hd/albondigas_arugula-1200.jpg 1200w"
+             sizes="112px"
+             alt="Albóndigas doradas sobre arúgula en plato blanco">
         <button class="fab" type="button" aria-label="Agregar Albóndigas al carbón"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
       </div>
-      <div class="dish__row">
-        <h3 class="dish__name">Albóndigas al carbón</h3>
-        <span class="dish__price num">$155</span>
-      </div>
-      <p class="dish__desc">Doradas a la brasa sobre arúgula fresca</p>
     </article>
   </section>
 
-  <section class="section" id="tacos">
-    <h2 class="section__title">Tacos</h2>
+  <section class="section" aria-labelledby="tacos">
+    <h2 class="section__title" id="tacos">Tacos</h2>
 
     <article class="dish">
       <div class="media">
-        <img class="media__photo" src="../fotos/tacos_barbacoa.jpg" alt="Tacos de res deshebrada con cebolla y cilantro">
+        <img class="media__photo"
+             src="../fotos/tacos_barbacoa.jpg"
+             srcset="hd/tacos_barbacoa-700.jpg 700w, hd/tacos_barbacoa-1200.jpg 1200w"
+             sizes="(max-width: 480px) 100vw, 480px"
+             alt="Tacos de res deshebrada con cebolla y cilantro">
         <div class="qty" role="group" aria-label="Tacos de barbacoa en tu pedido">
           <button type="button" aria-label="Quitar uno"><svg class="i" aria-hidden="true"><use href="#i-minus"/></svg></button>
           <output aria-label="2 en tu pedido">2</output>
           <button type="button" aria-label="Agregar uno más"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
         </div>
       </div>
-      <div class="dish__row">
+      <div class="dish__head">
         <h3 class="dish__name">Tacos de barbacoa</h3>
         <span class="dish__price num">$139</span>
       </div>
       <p class="dish__desc">Res deshebrada, cebolla y cilantro en maíz</p>
     </article>
 
-    <article class="dish">
-      <div class="media">
-        <img class="media__photo" src="../fotos/tacos_carnitas.jpg" alt="Tres tacos con pico de gallo y aguacate vistos desde arriba">
+    <article class="dish dish--row">
+      <div class="dish__text">
+        <h3 class="dish__name">Tacos de carnitas</h3>
+        <p class="dish__desc">Tres tacos con pico de gallo, aguacate y limón</p>
+        <p class="dish__price num">$129</p>
+      </div>
+      <div class="media media--thumb">
+        <img class="media__photo" style="--fx:49%; --fy:60%; --zoom:1.15"
+             src="../fotos/tacos_carnitas.jpg"
+             srcset="hd/tacos_carnitas-700.jpg 700w, hd/tacos_carnitas-1200.jpg 1200w"
+             sizes="112px"
+             alt="Tres tacos con pico de gallo y aguacate vistos desde arriba">
         <button class="fab" type="button" aria-label="Agregar Tacos de carnitas"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
       </div>
-      <div class="dish__row">
-        <h3 class="dish__name">Tacos de carnitas</h3>
-        <span class="dish__price num">$129</span>
-      </div>
-      <p class="dish__desc">Tres tacos con pico de gallo, aguacate y limón</p>
     </article>
   </section>
 
-  <section class="section" id="parrilla">
-    <h2 class="section__title">De la parrilla</h2>
+  <section class="section" aria-labelledby="parrilla">
+    <h2 class="section__title" id="parrilla">De la parrilla</h2>
 
     <article class="dish">
       <div class="media">
-        <a href="platillo.html" aria-label="Ver Arrachera al carbón"><img class="media__photo" src="../fotos/arrachera_papas.jpg" alt="Arrachera rebanada con papas a la francesa y hierbas"></a>
+        <a href="platillo.html" aria-label="Ver Arrachera al carbón"><img class="media__photo"
+             src="../fotos/arrachera_papas.jpg"
+             srcset="hd/arrachera_papas-700.jpg 700w, hd/arrachera_papas-1200.jpg 1200w"
+             sizes="(max-width: 480px) 100vw, 480px"
+             alt="Arrachera rebanada con papas a la francesa y hierbas"></a>
         <a class="fab" href="platillo.html" aria-label="Agregar Arrachera al carbón"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></a>
       </div>
-      <div class="dish__row">
+      <div class="dish__head">
         <h3 class="dish__name">Arrachera al carbón</h3>
         <span class="dish__price num">$345</span>
       </div>
       <p class="dish__desc">Rebanada, con papas a la francesa y hierbas</p>
     </article>
 
-    <article class="dish">
-      <div class="media">
-        <img class="media__photo" src="../fotos/costillas_bbq.jpg" alt="Costillar glaseado sobre tabla con papas, pepinillos y salsa">
+    <article class="dish dish--row">
+      <div class="dish__text">
+        <h3 class="dish__name">Costillas BBQ</h3>
+        <p class="dish__desc">Costillar glaseado con papas, pepinillos y salsa</p>
+        <p class="dish__price num">$365</p>
+      </div>
+      <div class="media media--thumb">
+        <img class="media__photo" style="--fx:40%"
+             src="../fotos/costillas_bbq.jpg"
+             srcset="hd/costillas_bbq-700.jpg 700w, hd/costillas_bbq-1200.jpg 1200w"
+             sizes="112px"
+             alt="Costillar glaseado sobre tabla con papas, pepinillos y salsa">
         <button class="fab" type="button" aria-label="Agregar Costillas BBQ"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
       </div>
-      <div class="dish__row">
-        <h3 class="dish__name">Costillas BBQ</h3>
-        <span class="dish__price num">$365</span>
-      </div>
-      <p class="dish__desc">Costillar glaseado con papas, pepinillos y salsa</p>
     </article>
 
-    <article class="dish">
-      <div class="media">
-        <img class="media__photo" src="../fotos/hamburguesa.jpg" alt="Hamburguesa doble con queso, pepinillos y aderezo">
+    <article class="dish dish--row">
+      <div class="dish__text">
+        <h3 class="dish__name">Hamburguesa Brasa</h3>
+        <p class="dish__desc">Doble carne con queso, pepinillos y aderezo</p>
+        <p class="dish__price num">$229</p>
+      </div>
+      <div class="media media--thumb">
+        <img class="media__photo"
+             src="../fotos/hamburguesa.jpg"
+             srcset="hd/hamburguesa-700.jpg 700w, hd/hamburguesa-1200.jpg 1200w"
+             sizes="112px"
+             alt="Hamburguesa doble con queso, pepinillos y aderezo">
         <button class="fab" type="button" aria-label="Agregar Hamburguesa Brasa"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
       </div>
-      <div class="dish__row">
-        <h3 class="dish__name">Hamburguesa Brasa</h3>
-        <span class="dish__price num">$229</span>
-      </div>
-      <p class="dish__desc">Doble carne con queso, pepinillos y aderezo</p>
     </article>
   </section>
 
-  <section class="section" id="postres">
-    <h2 class="section__title">Postres</h2>
+  <section class="section" aria-labelledby="postres">
+    <h2 class="section__title" id="postres">Postres</h2>
 
     <article class="dish">
       <div class="media">
-        <img class="media__photo" src="../fotos/pastel_frambuesa.jpg" alt="Rebanada de pastel en capas con frambuesas frescas" style="object-position:50% 52%">
+        <img class="media__photo" style="--fy:52%"
+             src="../fotos/pastel_frambuesa.jpg"
+             srcset="hd/pastel_frambuesa-700.jpg 700w, hd/pastel_frambuesa-1200.jpg 1200w"
+             sizes="(max-width: 480px) 100vw, 480px"
+             alt="Rebanada de pastel en capas con frambuesas frescas">
         <button class="fab" type="button" aria-label="Agregar Pastel de frambuesa"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
       </div>
-      <div class="dish__row">
+      <div class="dish__head">
         <h3 class="dish__name">Pastel de frambuesa</h3>
         <span class="dish__price num">$115</span>
       </div>
@@ -165,31 +207,48 @@
     </article>
   </section>
 
-  <section class="section" id="bebidas">
-    <h2 class="section__title">Bebidas</h2>
+  <!-- Sección sin destacado: solo lista -->
+  <section class="section" aria-labelledby="bebidas">
+    <h2 class="section__title" id="bebidas">Bebidas</h2>
 
-    <article class="dish">
-      <div class="media">
-        <img class="media__photo" src="../fotos/margaritas.jpg" alt="Cocteles en copa con rodaja de limón" style="object-position:50% 28%">
+    <article class="dish dish--row">
+      <div class="dish__text">
+        <h3 class="dish__name">Margarita de la casa</h3>
+        <p class="dish__desc">Con hielo frappé y rodaja de limón</p>
+        <p class="dish__price num">$165</p>
+      </div>
+      <div class="media media--thumb">
+        <img class="media__photo" style="--fx:62%; --fy:20%; --zoom:1.15"
+             src="../fotos/margaritas.jpg"
+             srcset="hd/margaritas-700.jpg 700w, hd/margaritas-1200.jpg 1200w"
+             sizes="112px"
+             alt="Coctel en copa con rodaja de limón">
         <button class="fab" type="button" aria-label="Agregar Margarita de la casa"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
       </div>
-      <div class="dish__row">
-        <h3 class="dish__name">Margarita de la casa</h3>
-        <span class="dish__price num">$165</span>
-      </div>
-      <p class="dish__desc">Con hielo frappé y rodaja de limón</p>
     </article>
   </section>
 
+  <footer class="outro">
+    <h2 class="outro__name">Brasa Demo</h2>
+    <address class="outro__info">
+      <p>Av. de la Demostración 123, Roma Norte, CDMX</p>
+      <p class="num">Todos los días de 13:00 a 23:00</p>
+      <p><a class="outro__tel num" href="tel:+525500000001">55 0000 0001</a></p>
+    </address>
+  </footer>
+
 </main>
 
-<a class="cart" href="#pedido" aria-label="Ver pedido: 3 platillos, 413 pesos">
-  <span class="cart__label">
-    <span class="cart__cta">Ver pedido</span>
-    <span class="cart__count num">3 platillos</span>
-  </span>
-  <span class="cart__total num">$413</span>
-</a>
+<div class="deck">
+  <button class="deck__search" type="button" aria-label="Buscar en el menú"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
+  <a class="cart" href="#pedido" aria-label="Ver pedido: 3 platillos, 413 pesos">
+    <span class="cart__label">
+      <span class="cart__cta">Ver pedido</span>
+      <span class="cart__count num">3 platillos</span>
+    </span>
+    <span class="cart__total num">$413</span>
+  </a>
+</div>
 
 </body>
 </html>

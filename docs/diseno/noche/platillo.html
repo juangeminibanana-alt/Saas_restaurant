@@ -20,8 +20,8 @@
 
 <div class="app has-bar">
   <main>
-    <figure class="hero hero--dish ph" style="--fp:60% 55%; --z:1.12">
-      <img src="../fotos/arrachera_papas.jpg" alt="Arrachera rebanada con papas a la francesa y hierbas en plato blanco">
+    <figure class="hero hero--dish ph" style="--fp:50% 50%">
+      <img src="../fotos/arrachera_papas.jpg" srcset="../fotos/arrachera_papas.jpg 900w, img/arrachera_papas-1200.jpg 1200w, img/arrachera_papas-1800.jpg 1800w" sizes="150vw" alt="Arrachera rebanada con papas a la francesa y hierbas en plato blanco">
       <a class="hero__btn hero__btn--start" href="menu.html" aria-label="Cerrar y volver al menú"><svg class="i" aria-hidden="true"><use href="#i-close"/></svg></a>
     </figure>
 
@@ -41,10 +41,10 @@
         <span class="label label--req">Elige 1</span>
       </div>
       <div class="seg" role="radiogroup" aria-labelledby="g-termino" aria-required="true">
-        <button class="seg__item" type="button" role="radio" aria-checked="false">Rojo</button>
-        <button class="seg__item is-on" type="button" role="radio" aria-checked="true">Medio</button>
-        <button class="seg__item" type="button" role="radio" aria-checked="false">Tres cuartos</button>
-        <button class="seg__item" type="button" role="radio" aria-checked="false">Bien cocido</button>
+        <button class="seg__item" type="button" data-t="Rojo" role="radio" aria-checked="false"><span>Rojo</span></button>
+        <button class="seg__item is-on" type="button" data-t="Medio" role="radio" aria-checked="true"><span>Medio</span></button>
+        <button class="seg__item" type="button" data-t="Tres cuartos" role="radio" aria-checked="false"><span>Tres cuartos</span></button>
+        <button class="seg__item" type="button" data-t="Bien cocido" role="radio" aria-checked="false"><span>Bien cocido</span></button>
       </div>
     </section>
 
@@ -52,7 +52,7 @@
     <section class="group is-done" aria-labelledby="g-guarnicion">
       <div class="group__head">
         <h2 class="group__title" id="g-guarnicion">Guarnición</h2>
-        <span class="label">Elige 1 · Incluida</span>
+        <span class="label">Elige 1 · incluida</span>
       </div>
       <div class="opts" role="radiogroup" aria-labelledby="g-guarnicion">
         <button class="opt is-on" type="button" role="radio" aria-checked="true">

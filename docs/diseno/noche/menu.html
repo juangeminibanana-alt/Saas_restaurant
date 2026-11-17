@@ -14,7 +14,6 @@
 
 <svg class="sprite" aria-hidden="true">
   <symbol id="i-search" viewBox="0 0 20 20"><circle cx="9" cy="9" r="5.75"/><path d="M13.25 13.25 17 17"/></symbol>
-  <symbol id="i-star" viewBox="0 0 20 20"><path d="m10 2.75 2.2 4.6 5.05.66-3.7 3.5.94 5L10 14.06l-4.5 2.45.95-5-3.7-3.5 5.05-.66z"/></symbol>
   <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 4.5v11M4.5 10h11"/></symbol>
   <symbol id="i-minus" viewBox="0 0 20 20"><path d="M4.5 10h11"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 20 20"><path d="M4.5 10h11M11 5.5l4.5 4.5-4.5 4.5"/></symbol>
@@ -22,60 +21,65 @@
 
 <div class="app has-bar">
 
-  <header>
-    <div class="hero hero--cover ph" style="--fp:100% 30%; --z:1.64">
-      <img src="../fotos/cover_brasa.jpg" alt="Salón de Brasa Demo: la barra bajo las campanas de cobre y las sillas rojizas">
-      <button class="hero__btn hero__btn--end" type="button" aria-label="Buscar en el menú"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
-    </div>
+  <!-- Portada: la identidad va sobre la foto, encima del velo. La imagen es un
+       encuadre propio del original a 2400 px (srcset: nítida en 2x y 3x). -->
+  <header class="hero hero--cover ph">
+    <img src="img/cover_brasa-860.jpg"
+         srcset="img/cover_brasa-860.jpg 860w, img/cover_brasa-1290.jpg 1290w"
+         sizes="(min-width: 430px) 430px, 100vw"
+         alt="Salón de Brasa Demo: la barra bajo las campanas de cobre y las sillas de piel">
     <div class="id">
       <h1 class="id__name">Brasa Demo</h1>
-      <p class="id__tag">Parrilla mexicana contemporánea</p>
+      <p class="id__tag label">Parrilla mexicana contemporánea</p>
+      <ul class="facts">
+        <li><span class="dot" aria-hidden="true"></span><span><strong>Abierto</strong> · cierra <span class="num">23:00</span></span></li>
+        <li><span><span class="sr">Tiempo estimado: </span><span class="num">25–35</span> min</span></li>
+        <li><span><span class="sr">Calificación: </span><span class="num">4.8</span> / 5</span></li>
+      </ul>
     </div>
-    <ul class="facts">
-      <li class="facts__open"><span class="dot" aria-hidden="true"></span>Abierto</li>
-      <li><span>25–35 min</span></li>
-      <li><svg class="i i--sm" aria-hidden="true"><use href="#i-star"/></svg><span aria-label="Calificación 4.8">4.8</span></li>
-    </ul>
   </header>
 
-  <nav class="nav" aria-label="Categorías">
-    <div class="seg seg--scroll">
-      <a class="seg__item is-on" href="#destacados" data-t="Destacados" aria-current="true"><span>Destacados</span></a>
-      <a class="seg__item" href="#entradas" data-t="Entradas"><span>Entradas</span></a>
-      <a class="seg__item" href="#tacos" data-t="Tacos"><span>Tacos</span></a>
-      <a class="seg__item" href="#parrilla" data-t="De la parrilla"><span>De la parrilla</span></a>
-      <a class="seg__item" href="#postres" data-t="Postres"><span>Postres</span></a>
-      <a class="seg__item" href="#bebidas" data-t="Bebidas"><span>Bebidas</span></a>
-    </div>
-  </nav>
+  <div class="nav">
+    <button class="nav__search" type="button" aria-label="Buscar en el menú"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
+    <nav class="seg--scroll" aria-label="Categorías">
+      <div class="seg seg__track">
+        <a class="seg__item is-on" href="#destacados" data-t="Destacados" aria-current="true"><span>Destacados</span></a>
+        <a class="seg__item" href="#entradas" data-t="Entradas"><span>Entradas</span></a>
+        <a class="seg__item" href="#tacos" data-t="Tacos"><span>Tacos</span></a>
+        <a class="seg__item" href="#parrilla" data-t="De la parrilla"><span>De la parrilla</span></a>
+        <a class="seg__item" href="#postres" data-t="Postres"><span>Postres</span></a>
+        <a class="seg__item" href="#bebidas" data-t="Bebidas"><span>Bebidas</span></a>
+      </div>
+    </nav>
+  </div>
 
   <main>
 
     <section class="section" id="destacados" aria-labelledby="h-destacados">
       <div class="section__head">
-        <h2 class="section__title" id="h-destacados">Destacados</h2>
-        <span class="label">Esta semana</span>
+        <h2 class="section__title" id="h-destacados">Esta semana</h2>
+        <span class="label">Selección de la casa</span>
       </div>
       <div class="bento">
         <a class="tile tile--lg" href="platillo.html">
-          <span class="tile__media ph" style="--fp:56% 56%; --z:1.1"><img src="../fotos/arrachera_papas.jpg" alt="Arrachera rebanada con papas a la francesa"></span>
+          <span class="tile__media ph" style="--fp:56% 56%; --z:1.1"><img src="../fotos/arrachera_papas.jpg" srcset="../fotos/arrachera_papas.jpg 900w, img/arrachera_papas-1200.jpg 1200w, img/arrachera_papas-1800.jpg 1800w" sizes="(min-width: 430px) 440px, 102vw" alt="Arrachera rebanada con papas a la francesa"></span>
           <div class="tile__cap">
             <div class="tile__line"><h3 class="tile__name">Arrachera al carbón</h3><span class="tile__price">$345</span></div>
-            <p class="tile__meta"><span>Rebanada, con papas a la francesa</span><span class="label">01</span></p>
+            <p class="tile__meta">Rebanada, con papas a la francesa</p>
           </div>
         </a>
         <a class="tile" href="platillo.html?platillo=tacos-de-garbanzo">
           <span class="tile__media ph" style="--fp:50% 45%"><img src="../fotos/tacos_garbanzo_aguacate.jpg" alt="Tacos de garbanzo con aguacate; una mano exprime limón encima"></span>
           <div class="tile__cap">
             <h3 class="tile__name">Tacos de garbanzo</h3>
-            <p class="tile__meta"><span class="price">$119</span><span class="label">02</span></p>
+            <p class="tile__meta"><span class="price">$119</span></p>
           </div>
         </a>
         <a class="tile" href="platillo.html?platillo=pastel-de-frambuesa">
           <span class="tile__media ph" style="--fp:73% 45%; --z:1.2"><img src="../fotos/pastel_frambuesa.jpg" alt="Rebanada de pastel en capas con frambuesas frescas"></span>
           <div class="tile__cap">
             <h3 class="tile__name">Pastel de frambuesa</h3>
-            <p class="tile__meta"><span class="price">$115</span><span class="label">03</span></p>
+            <p class="tile__meta"><span class="price">$115</span></p>
           </div>
         </a>
       </div>
@@ -88,7 +92,7 @@
       </div>
       <ul class="rows">
         <li class="row">
-          <span class="row__media ph" style="--fp:54% 44%; --z:1.35" aria-hidden="true"><img src="../fotos/ensalada_aguacate_garbanzo.jpg" alt=""></span>
+          <span class="row__media ph" style="--fp:52% 46%; --z:1.6" aria-hidden="true"><img src="img/ensalada_aguacate_garbanzo.jpg" alt=""></span>
           <div class="row__body">
             <div class="row__text">
               <h3 class="row__name"><a href="platillo.html?platillo=ensalada-de-la-huerta">Ensalada de la huerta</a></h3>
@@ -96,12 +100,16 @@
             </div>
             <div class="row__foot">
               <span class="price">$135</span>
-              <button class="add" type="button" aria-label="Agregar Ensalada de la huerta"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
+              <div class="stepper stepper--on" role="group" aria-label="Ensalada de la huerta: 1 en tu pedido">
+                <button type="button" aria-label="Quitar uno"><svg class="i" aria-hidden="true"><use href="#i-minus"/></svg></button>
+                <output>1</output>
+                <button type="button" aria-label="Agregar uno"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
+              </div>
             </div>
           </div>
         </li>
         <li class="row">
-          <span class="row__media ph" style="--fp:4% 44%; --z:1.54" aria-hidden="true"><img src="../fotos/albondigas_arugula.jpg" alt=""></span>
+          <span class="row__media ph" style="--fp:30% 50%; --z:1.9" aria-hidden="true"><img src="img/albondigas_arugula.jpg" alt=""></span>
           <div class="row__body">
             <div class="row__text">
               <h3 class="row__name"><a href="platillo.html?platillo=albondigas-al-carbon">Albóndigas al carbón</a></h3>
@@ -114,7 +122,7 @@
           </div>
         </li>
         <li class="row">
-          <span class="row__media ph" style="--fp:54% 81%; --z:1.52" aria-hidden="true"><img src="../fotos/camarones_caldillo_arroz.jpg" alt=""></span>
+          <span class="row__media ph" style="--fp:52% 62%; --z:1.9" aria-hidden="true"><img src="img/camarones_caldillo_arroz.jpg" alt=""></span>
           <div class="row__body">
             <div class="row__text">
               <h3 class="row__name"><a href="platillo.html?platillo=caldillo-de-camaron">Caldillo de camarón</a></h3>
@@ -122,11 +130,7 @@
             </div>
             <div class="row__foot">
               <span class="price">$149</span>
-              <div class="stepper stepper--on" role="group" aria-label="Caldillo de camarón: 1 en tu pedido">
-                <button type="button" aria-label="Quitar uno"><svg class="i" aria-hidden="true"><use href="#i-minus"/></svg></button>
-                <output>1</output>
-                <button type="button" aria-label="Agregar uno"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
-              </div>
+              <button class="add" type="button" aria-label="Agregar Caldillo de camarón"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
             </div>
           </div>
         </li>
@@ -140,7 +144,7 @@
       </div>
       <ul class="rows">
         <li class="row">
-          <span class="row__media ph" style="--fp:40% 50%" aria-hidden="true"><img src="../fotos/tacos_barbacoa.jpg" alt=""></span>
+          <span class="row__media ph" style="--fp:50% 60%; --z:1.3" aria-hidden="true"><img src="../fotos/tacos_barbacoa.jpg" alt=""></span>
           <div class="row__body">
             <div class="row__text">
               <h3 class="row__name"><a href="platillo.html?platillo=tacos-de-barbacoa">Tacos de barbacoa</a></h3>
@@ -157,7 +161,7 @@
           </div>
         </li>
         <li class="row">
-          <span class="row__media ph" style="--fp:46% 52%; --z:1.6" aria-hidden="true"><img src="../fotos/tacos_carnitas.jpg" alt=""></span>
+          <span class="row__media ph" style="--fp:50% 56%; --z:2.3" aria-hidden="true"><img src="img/tacos_carnitas.jpg" alt=""></span>
           <div class="row__body">
             <div class="row__text">
               <h3 class="row__name"><a href="platillo.html?platillo=tacos-de-carnitas">Tacos de carnitas</a></h3>
@@ -205,7 +209,7 @@
           </div>
         </li>
         <li class="row">
-          <span class="row__media ph" style="--fp:81% 91%; --z:1.25" aria-hidden="true"><img src="../fotos/costillas_bbq.jpg" alt=""></span>
+          <span class="row__media ph" style="--fp:70% 62%; --z:2" aria-hidden="true"><img src="../fotos/costillas_bbq.jpg" alt=""></span>
           <div class="row__body">
             <div class="row__text">
               <h3 class="row__name"><a href="platillo.html?platillo=costillas-bbq">Costillas BBQ</a></h3>
@@ -218,7 +222,7 @@
           </div>
         </li>
         <li class="row">
-          <span class="row__media ph" style="--fp:48% 45%; --z:1.08" aria-hidden="true"><img src="../fotos/hamburguesa.jpg" alt=""></span>
+          <span class="row__media ph" style="--fp:48% 50%; --z:1.2" aria-hidden="true"><img src="../fotos/hamburguesa.jpg" alt=""></span>
           <div class="row__body">
             <div class="row__text">
               <h3 class="row__name"><a href="platillo.html?platillo=hamburguesa-brasa">Hamburguesa Brasa</a></h3>
@@ -275,7 +279,7 @@
       </div>
       <ul class="rows">
         <li class="row">
-          <span class="row__media ph" style="--fp:53% 20%; --z:1.6" aria-hidden="true"><img src="../fotos/margaritas.jpg" alt=""></span>
+          <span class="row__media ph" style="--fp:54% 46%; --z:1.7" aria-hidden="true"><img src="img/margaritas.jpg" alt=""></span>
           <div class="row__body">
             <div class="row__text">
               <h3 class="row__name"><a href="platillo.html?platillo=margarita-de-la-casa">Margarita de la casa</a></h3>
@@ -307,22 +311,22 @@
   </main>
 </div>
 
-<!-- Tu pedido: 2 × Tacos de barbacoa ($139) + 1 × Caldillo de camarón ($149) = $427 -->
+<!-- Tu pedido: 1 × Ensalada de la huerta ($135) + 2 × Tacos de barbacoa ($139) = 3 platillos · $413 -->
 <aside class="bar" aria-label="Tu pedido">
   <div class="bar__sum">
     <span class="label">3 platillos</span>
-    <span class="bar__total">$427</span>
+    <span class="bar__total">$413</span>
   </div>
   <a class="btn" href="#">Ver pedido<svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></a>
 </aside>
 
 <!-- Mejora progresiva (la página funciona igual sin ella): el segmento activo
-     sigue a la sección que se está leyendo y la barra pegada gana su filete. -->
+     sigue a la sección que se está leyendo y la fila pegada gana su filete. -->
 <script>
 (() => {
   const nav = document.querySelector('.nav');
-  const track = nav.querySelector('.seg');
-  const items = [...track.querySelectorAll('.seg__item')];
+  const rail = nav.querySelector('.seg--scroll');
+  const items = [...rail.querySelectorAll('.seg__item')];
   const sections = items.map(a => document.querySelector(a.getAttribute('href')));
   let current = 0;
 
@@ -331,16 +335,20 @@
       a.classList.toggle('is-on', k === i);
       if (k === i) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
     });
-    const a = items[i];
-    track.scrollTo({ left: a.offsetLeft - (track.clientWidth - a.offsetWidth) / 2, behavior: 'smooth' });
+    // el segmento anterior queda al borde del carril: nunca se corta una etiqueta por la izquierda
+    rail.scrollTo({ left: items[Math.max(0, i - 1)].offsetLeft, behavior: 'smooth' });
   };
 
   const sync = () => {
-    const line = nav.offsetHeight + 8;                       // justo debajo de la barra pegada
+    const top = parseFloat(getComputedStyle(nav).top) || 0;   // área segura
+    const line = top + nav.offsetHeight + 8;                   // justo debajo de la fila pegada
+    const doc = document.documentElement;
     let i = 0;
-    sections.forEach((s, k) => { if (s.getBoundingClientRect().top <= line) i = k; });
-    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) i = sections.length - 1;
-    nav.classList.toggle('is-stuck', nav.getBoundingClientRect().top <= 0 && scrollY > 0);
+    if (scrollY > 0) {
+      sections.forEach((s, k) => { if (s.getBoundingClientRect().top <= line) i = k; });
+      if (innerHeight + scrollY >= doc.scrollHeight - 2) i = sections.length - 1;
+    }
+    nav.classList.toggle('is-stuck', scrollY > 0 && nav.getBoundingClientRect().top <= top);
     if (i !== current) { current = i; activate(i); }
   };
 

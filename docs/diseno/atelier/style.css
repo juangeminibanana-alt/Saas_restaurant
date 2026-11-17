@@ -2,32 +2,38 @@
    ATELIER — lujo silencioso
    Sistema de diseño para el menú del comensal (marca blanca).
 
-   Cuatro reglas:
+   Cinco reglas:
    1. Una sola retícula: dos columnas de 163 con medianil de 16 y márgenes de 24.
    2. Una sola lámina en tres tamaños: vertical 4:5 (163 × 204) en la retícula,
-      abierta 5:4 para el platillo de la casa y para el platillo abierto,
-      y miniatura cuadrada de 72 en los renglones de lista.
+      abierta 5:4 (342 × 272) para el platillo de la casa y para el platillo abierto,
+      y miniatura cuadrada de 72 en los renglones de lista. Siempre dentro de los
+      márgenes y con el mismo papel: ninguna foto es más blanca que el panel
+      ni más negra que la tinta.
    3. Un solo color: el de la marca del restaurante, y solo como punto,
       línea fina o acción principal. Lo que ya está en el pedido va en tinta;
       el estado (abierto / cerrado) también: nunca depende del color de marca.
    4. Dos grises con oficio distinto: el filete separa (decorativo),
       el contorno de control delimita algo que se toca (3:1 sobre blanco).
+   5. Un solo muelle fijo con la misma gramática en las dos pantallas:
+      a la izquierda la herramienta en contorno (buscar / cantidad),
+      a la derecha la acción llena (ver pedido en tinta / agregar en color de marca).
    ========================================================================== */
 
 :root {
   /* ---- Color ---------------------------------------------------------- */
   --c-bg:            #FFFFFF;  /* fondo */
-  --c-panel:         #F4F4F2;  /* superficie neutra: fondo de la lámina mientras carga la foto */
+  --c-panel:         #F4F4F2;  /* superficie neutra: el papel de la lámina (el blanco de toda foto) */
   --c-line:          #E6E6E3;  /* filete de 1px: separa renglones y segmentos */
   --c-control:       #8C8C88;  /* contorno de controles — 3.4:1 sobre blanco */
-  --c-ink:           #111111;  /* texto, reglas fuertes, barra del pedido, estado */
+  --c-ink:           #111111;  /* texto, reglas fuertes, barra del pedido, estado; el negro de toda foto */
   --c-muted:         #6B6B6B;  /* texto secundario — 5.3:1 sobre blanco */
   --c-brand:         #B4411F;  /* brasa: color de marca — 5.6:1 con blanco */
   --c-on-ink:        #FFFFFF;
   --c-on-ink-muted:  #B9B9B5;  /* secundario sobre tinta — 9.6:1 */
 
   /* ---- Tipografía ----------------------------------------------------- */
-  --font-sans: "Hanken Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans:    "Atelier Uno", "Hanken Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif; /* texto y cifras que se leen */
+  --font-tabular: "Hanken Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;                /* cifras de ancho fijo */
 
   --w-light:   300;
   --w-regular: 400;
@@ -69,10 +75,10 @@
 
   /* ---- Lámina: una sola foto, tres tamaños ---------------------------- */
   --plate:        163 / 204;  /* vertical 4:5, una columna */
-  --plate-spread: 171 / 136;  /* abierta 5:4 a dos columnas: 342 × 272 exactos */
-  --plate-open:   5 / 4;      /* abierta y a sangre en el platillo: 390 × 312 */
+  --plate-open:   171 / 136;  /* abierta 5:4 a dos columnas: 342 × 272 exactos, en el menú y en el platillo */
   --thumb:        72px;       /* miniatura cuadrada de los renglones */
-  --grade:        saturate(.9) contrast(1.02);  /* etalonaje común: todas las fotos, una misma cocina */
+  --grade:        saturate(.78) contrast(1.02);                  /* etalonaje común: todas las fotos, una misma cocina */
+  --grade-flash:  saturate(.62) contrast(.92) brightness(1.04);  /* corrección por foto: flash directo, verdes eléctricos */
 
   /* ---- Radios: un solo sistema ---------------------------------------- */
   --r-sharp: 2px;    /* fotos, botones, controles, barra */
@@ -83,7 +89,7 @@
   --shadow-dock:    0 -1px 0 var(--c-line);              /* borde superior del muelle fijo */
   --shadow-rule:    inset 0 -1px 0 var(--c-line);        /* filete inferior sin sumar a la medida */
   --shadow-control: inset 0 0 0 1px var(--c-control);    /* contorno de control sin sumar a la medida */
-  --shadow-frame:   inset 0 0 0 1px rgb(17 17 17 / .08); /* canto de la lámina: define las fotos de fondo blanco */
+  --shadow-frame:   inset 0 0 0 1px rgb(17 17 17 / .08); /* canto de la lámina: define las fotos de fondo claro */
 
   /* ---- Controles ------------------------------------------------------ */
   --touch:   44px;   /* área táctil mínima */
@@ -91,6 +97,16 @@
   --bar:     52px;   /* altura de la acción principal */
   --stroke:  1.5px;  /* grosor único de iconos */
 }
+
+/* ---- Cifras ------------------------------------------------------------
+   Hanken Grotesk solo trae cifras de ancho fijo (todas avanzan 560/1000 y no hay pnum):
+   en un precio, el 1 deja un hueco a cada lado y «$135» se lee «$1 35».
+   «Atelier Uno» es ese mismo 1 —su contorno, en los tres pesos del sistema— con los blancos
+   laterales del resto de las cifras. No cambia ningún otro signo ni la métrica vertical.
+   Derivado de Hanken Grotesk, © 2021 The Hanken Grotesk Project Authors, SIL Open Font License 1.1. */
+@font-face { font-family: "Atelier Uno"; font-weight: 300; unicode-range: U+0031; src: url(data:font/woff2;base64,d09GMgABAAAAAAHgAAoAAAAAA6AAAAGWAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmAANAosRwE2AiQDCAsGAAQgBYMGByAbAgMoLgdsYxJ5wxgjdmvKLjZ1fBbyIA/izxE8v8aa93dRTWJWXTO0DikSEpXQINHM7i6aTK5te6BkFjFpotJeZT9DGjWTOFogEXhse+Ill1ludKxWBE3+Qx+a7XQDHAX0HmkInY8TSTDRQLMEssTKEgl0wIFobmNB4JLwiTRrQh4/oyBFOk03wOZ041gm+gC6wLe2tLjrazzL3v5dwY0hICC+pNAmgYQM9RIC9ZLaALlcYPy/+ocFICSQI1COCkAOiPKyguHSKDs7h7Asf5zt/+2aC8yByLKja5/lqr5KZG9we5oGrx1LFIDoTBcolEDwS+PfhloVSKuULWtxogAiKRcgAI0K7UiIvASXGIRGPySVbso8olCT/0mVZiJZhMVeKJfNwSE1FTVVyInDhMyoIj5TBJmiMM7E+JCdZU90fG2fwDkwikEyHBwXYxrKymwuziFoSnRYqCykorgNYDZMYMqcC2GRnbL6NA64TBRyFsEOTDYhoKKWEe1FdRWVgw9idJQrxjEljCtQglG2sq2JlQTwP30EAAAA) format("woff2"); }
+@font-face { font-family: "Atelier Uno"; font-weight: 400; unicode-range: U+0031; src: url(data:font/woff2;base64,d09GMgABAAAAAAHcAAoAAAAAA6AAAAGVAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmAANAosRwE2AiQDCAsGAAQgBYMGByAbAgMoLgfshvwbQgiR2jJrO4fO+a2BRk2fN0VQP/bbe98UTXhSya4ZUmSoeOmURkkkiHgkyuicIyUqT0h2hF3poOXcMyeeYynXy1hf1JcIh9FZs7RZE7kF/W+50w8wav47jzSEIIwTSTAPKNAsgSyxskQCDTgQTXcYsSOTvpnOGpBNEfdypMv0wNnuZpxKlMBRBbqNLe/7moru/zdcGHmcgPhOEfqISMignSjQTtKHk5UVmPrxjwQgJJBFoIoaIAuIaiU3VuYrVw/BV7LP09un5x24Bgt4ZDIn54344qzR+SFm3uDlsheH14FI4GImRchLIPjl43dDtRJPuuS5lC3BSVVkQvXy9ogiW8IjAqFTjKTuKc1a5HX57VQ3n2AZFPrAbCYLBZQUlBQBFxYdsCALuHQBYA6DKB3hAg5SOFJF5w4xlAXCCCDBQlEhoiUvz2SjLIwiRwX58nwyjFMPZIIYIs+6YGaZIWnIyx6bDgOuAtCJzsR4ZNjSoj6roqBw8EGECrOFKCKHsHlyIMyUtzezIQL/GTQ=) format("woff2"); }
+@font-face { font-family: "Atelier Uno"; font-weight: 500; unicode-range: U+0031; src: url(data:font/woff2;base64,d09GMgABAAAAAAHkAAoAAAAAA6AAAAGcAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmAANAosRwE2AiQDCAsGAAQgBYMGByAbAgMoLod3gMlIAsPKcLpiu6qiIV+fNh5VvIqH/vdrd+a/FU17NmEhiWoiEwOkSGmUtI2IN2g2uaZJQVdIIh6Be4R8aKBl3W5O7MYYcBlOPDiMcAMgiChK6KX/osjtusNoaZY7/QCj5r/zSEMIwjiRBPOAAs0SyBIrSyTQgAPRdIcROzLpm+msASVLfImSd/kOuOhm3CpEAaAKdKeH6zvww1xU/f8FF0YdEBCfecWUMBIVBsICAxFTgKIIzP0f/5gAhAQFgS56gAKIbqc214ad+wcIO2U07VuWeE0l2AVRVTcdDiE2+TZcvcDTcQGeiwwQG3lFXYLgl4+fDbVKkHTpuRWeDKeuyITq1V0Li9LCIwTC0C9S3ygtFnVj/nbqW46QA0jgG2ExmJiEloaWpoRnJk3CgcTn0PgS9giE0VCOhHspbKlgc5c4xoQQVEKBiWEC1EhdncHCmDhZjQLx1HkkBKcuxIBwVJ15wawyQtGSl10WDZHwwoc80hg4l4RYWtRXdTU0Dj6IUhCWAEPVUBZXDUIY6u7sXISBf8UAAA==) format("woff2"); }
 
 /* ==========================================================================
    Base
@@ -106,7 +122,6 @@ body {
   color: var(--c-ink);
   font: var(--t-body);
   font-feature-settings: "kern", "liga";
-  font-variant-numeric: lining-nums tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -190,35 +205,45 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   aspect-ratio: var(--plate);
   border-radius: var(--r-sharp);
   overflow: hidden;
-  background: var(--c-panel);
+  isolation: isolate;        /* las dos capas de abajo solo mezclan con la foto, nunca con la página */
+  background: var(--c-bg);   /* sin foto, la lámina es papel: blanco × panel = panel */
 }
-.plate-frame::after { /* canto: un filete al 8 % de tinta para que el blanco de la foto no se funda con la página */
+/* un mismo papel para todas las fotos, vengan de donde vengan:
+   el negro de la foto se detiene en la tinta y el blanco en el panel. Los tonos medios no se tocan.
+   En producción este paso se hornea al subir la foto; aquí lo hacen dos capas. */
+.plate-frame::before,
+.plate-frame::after {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 1;
   border-radius: inherit;
-  box-shadow: var(--shadow-frame);
   pointer-events: none;
 }
-.plate-frame img,
-.hero img { filter: var(--grade); }
+.plate-frame::before { background: var(--c-ink);   mix-blend-mode: lighten; }
+.plate-frame::after  { background: var(--c-panel); mix-blend-mode: multiply; box-shadow: var(--shadow-frame); } /* + canto al 8 % de tinta */
+.plate-frame img { filter: var(--grade); }
 
-/* encuadres: el punto de interés de cada foto dentro de su lámina.
-   Ninguno amplía la foto por encima de su resolución nativa a 2x. */
+/* encuadres de las fotos de demostración: el punto de interés de cada una dentro de su lámina.
+   Un solo sujeto, entero, por lámina. Ninguno amplía la foto por encima de su resolución nativa a 2x. */
 .crop-room    { transform: scale(1.04); transform-origin: 100% 100%; object-position: 100% 50%; } /* campanas, barra y mesa puesta */
-.crop-macro   { transform: scale(1.4);  transform-origin: 22% 38%; }
-.crop-tacos   { transform: scale(1.45); transform-origin: 47% 60%; }  /* solo el plato: fuera mesa y servilleta */
-.crop-right-s { object-position: 68% 50%; }
-.crop-jars    { transform: scale(1.2);  transform-origin: 62% 78%; }
-.crop-coupe   { transform: scale(2.65); transform-origin: 71% 21%; }  /* una sola copa contra el fondo oscuro */
-.crop-glass   { transform: scale(1.4);  transform-origin: 57% 68%; }
-.crop-tall    { transform: scale(1.3);  transform-origin: 48% 37%; }
+.crop-table   { transform: scale(1.05); transform-origin: 100% 50%; object-position: 50% 66%; } /* el plato entero sobre la mesa, con el tenedor */
+.crop-tacos   { transform: scale(1.45); transform-origin: 47% 60%; }      /* solo el plato: fuera mesa y servilleta */
+.crop-rack    { object-position: 100% 50%; }                              /* el costillar hasta la punta, con papas y pepinillos */
+.crop-jar     { transform: scale(2.045); transform-origin: 97% 86%; object-position: 50% 100%; } /* un solo vasito, entero */
+/* las bebidas son una serie: la guarnición entera en el borde del vaso, y el vaso cortado a propósito */
+.crop-coupe   { transform: scale(2.8125); transform-origin: 80.2% 11.2%; } /* gajo de limón sobre la copa */
+.crop-glass   { transform: scale(2.143); transform-origin: 39.6% 21.4%; }  /* rodaja de limón y hierbabuena */
+.crop-tall    { transform: scale(2.8125); transform-origin: 56% 24.4%; }  /* fresa y hierbabuena */
+
+/* etalonaje por foto: solo donde la toma original se sale del conjunto */
+.grade-flash  { --grade: var(--grade-flash); }
 
 /* ==========================================================================
    Menú — cabecera
    ========================================================================== */
 
-.masthead { padding-top: var(--s-2); }
+.masthead { padding-top: calc(var(--s-2) + env(safe-area-inset-top, 0px)); } /* bajo la barra de estado, nunca detrás */
 
 .masthead__top {
   display: flex;
@@ -235,15 +260,6 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   height: var(--control);
   object-fit: contain;
   object-position: left center;
-}
-
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--touch);
-  height: var(--touch);
-  margin-right: -14px; /* el glifo, no la caja, toca el margen */
 }
 
 .masthead__grid {
@@ -328,15 +344,15 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   top: 0;
   z-index: 2;
   margin: var(--s-4) calc(var(--margin) * -1) 0;
-  padding: 0 var(--margin);
+  padding: env(safe-area-inset-top, 0px) var(--margin) 0; /* fija bajo la barra de estado, nunca detrás */
   background: var(--c-bg);
 }
 .tabs ul {
   display: flex;
   justify-content: space-between;
-  gap: var(--s-4);
+  gap: var(--s-2); /* mínimo; a 390 el reparto deja 18 entre categorías */
   /* el filete va por dentro: si hay más categorías la fila se desliza sin recortar la línea activa */
-  background: linear-gradient(var(--c-line), var(--c-line)) left bottom / 100% 1px no-repeat;
+  box-shadow: var(--shadow-rule);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -435,7 +451,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 /* ---- Lámina abierta: el platillo de la casa, una por sección como máximo */
 .plate--spread { grid-column: 1 / -1; }
-.plate--spread .plate-frame { aspect-ratio: var(--plate-spread); }
+.plate--spread .plate-frame { aspect-ratio: var(--plate-open); }
 .plate--spread .plate__body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -474,7 +490,10 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   align-items: center;
   gap: var(--s-4);
 }
-.row--plain { grid-template-columns: minmax(0, 1fr) auto; } /* sin foto: el texto arranca en el margen */
+.row--plain { /* sin foto: el texto arranca en el margen y el renglón se cierra a 68 */
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: calc(var(--touch) + var(--s-6));
+}
 
 /* ---- Agregar: cuadro de 32 con área táctil de 44 ----------------------- */
 .add {
@@ -492,6 +511,14 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   content: "";
   position: absolute;
   inset: -6px;
+}
+/* en un renglón no cabe el contador: el cuadro se llena de tinta y dice la cantidad; al tocarlo se abre */
+.add--on {
+  box-shadow: none;
+  background: var(--c-ink);
+  color: var(--c-on-ink);
+  font: var(--t-body);
+  font-weight: var(--w-medium);
 }
 
 /* ---- Contador: el mismo cuadro, lleno de tinta ------------------------- */
@@ -519,8 +546,21 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   font-weight: var(--w-medium);
 }
 
+/* ---- Cierre: la página termina como empieza, con el nombre y su ficha --- */
+.closing {
+  margin-top: var(--s-14);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--c-ink);
+}
+.closing__name {
+  font: var(--t-title);
+  letter-spacing: var(--ls-title);
+  margin-left: -1px;
+}
+.closing .facts { margin-top: var(--s-4); }
+
 .colophon {
-  margin-top: var(--s-12);
+  margin-top: var(--s-6);
   padding-bottom: var(--s-8);
   font: var(--t-label);
   letter-spacing: var(--ls-label);
@@ -529,7 +569,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 
 /* ==========================================================================
-   Muelle fijo: barra del pedido / acción principal
+   Muelle fijo: buscar + pedido en el menú, cantidad + agregar en el platillo
    ========================================================================== */
 
 .has-dock { padding-bottom: calc(var(--bar) + var(--s-6)); } /* alto del muelle */
@@ -546,10 +586,38 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   box-shadow: var(--shadow-dock);
 }
 
+.dock__row {
+  display: flex;
+  gap: var(--s-4);
+}
+
+/* buscar: siempre a la vista y al alcance del pulgar, también después de deslizar */
+.tool {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--bar);
+  height: var(--bar);
+  border-radius: var(--r-sharp);
+  box-shadow: var(--shadow-control);
+}
+.tool--field { /* pedido vacío: el buscador toma todo el muelle y se nombra */
+  flex: 1;
+  justify-content: flex-start;
+  gap: var(--s-3);
+  padding: 0 var(--s-4);
+  font: var(--t-body);
+  color: var(--c-muted);
+}
+.tool--field .icon { color: var(--c-ink); }
+
 .cartbar {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  column-gap: var(--s-2); /* aire mínimo entre la cuenta y el importe */
   height: var(--bar);
   padding: 0 var(--s-4);
   border-radius: var(--r-sharp);
@@ -557,13 +625,21 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   color: var(--c-on-ink);
   font: var(--t-body);
 }
-.cartbar__lead {
+.cartbar__lead { /* una sola línea: lo que no cabe salta a la segunda y queda fuera de la caja.
+                    Si el pedido crece o la pantalla es angosta, se retira la cuenta entera; nunca el importe */
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--s-3);
+  column-gap: var(--s-3);
+  height: var(--s-5);
+  overflow: hidden;
+  white-space: nowrap;
 }
 .cartbar__count { color: var(--c-on-ink-muted); }
 .cartbar__go {
+  flex: none;
   display: flex;
   align-items: center;
   gap: var(--s-3);
@@ -571,40 +647,48 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 .cartbar strong { font-weight: var(--w-medium); }
 
+@media (max-width: 374px) { /* teléfonos de 360: el muelle se aprieta un paso de la retícula */
+  .dock__row { gap: var(--s-3); }
+  .cartbar { padding: 0 var(--s-3); }
+  .cartbar__lead { column-gap: var(--s-2); }
+  .cartbar__go { gap: var(--s-2); }
+}
+
 /* ==========================================================================
    Platillo abierto
    ========================================================================== */
 
-/* la lámina se abre: mismo 4:5, girado a 5:4 y a sangre */
-.hero {
+/* la cabecera del platillo repite la del menú: una fila de 44 y, debajo, la lámina.
+   El regreso nombra a dónde vuelve y vive en la página, nunca encima de la foto. */
+.back {
   position: relative;
-  width: 100%;
-  max-width: var(--page);
-  aspect-ratio: var(--plate-open);
-  margin: 0 auto;
-  background: var(--c-panel);
-}
-.hero__back {
-  position: absolute;
-  top: var(--s-4);
-  left: var(--margin);
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: var(--touch);
+  gap: var(--s-2);
   height: var(--touch);
-  border-radius: var(--r-sharp);
-  background: var(--c-bg);
+  min-width: var(--touch);
+  margin-left: -2px; /* la punta de la flecha toca el margen */
   color: var(--c-ink);
 }
+.back::before { /* área táctil: se extiende hacia el borde de la pantalla */
+  content: "";
+  position: absolute;
+  inset: 0 calc(var(--s-3) * -1);
+}
 
-.open__head { padding: var(--s-6) 0; }
+/* la lámina abierta es la misma del menú: 342 × 272, dentro de los márgenes.
+   Una foto de catálogo de 900 × 600 la llena sin ampliarse a 2x; a 3x el `srcset` pide la versión de 1368. */
+.plate-frame--open {
+  aspect-ratio: var(--plate-open);
+  margin-top: var(--s-3);
+}
+
+.open__head { padding: var(--s-4) 0 var(--s-6); }
 .open__title {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--s-4);
-  margin-top: var(--s-2);
 }
 .open__title h1 {
   font: var(--t-title);
@@ -697,13 +781,12 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   cursor: pointer;
 }
 .options li:last-child .option { box-shadow: none; }
-.option:has(input:focus-visible) {
+.option:has(input:focus-visible) .radio {
   outline: 2px solid var(--c-ink);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 .option__name { flex: 1; }
 .option__delta { font-weight: var(--w-light); }
-.option__delta--none { color: var(--c-muted); font-weight: var(--w-regular); }
 .radio {
   width: 18px;
   height: 18px;
@@ -724,10 +807,6 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 
 /* ---- Muelle del platillo: cantidad + acción principal ------------------ */
-.order {
-  display: flex;
-  gap: var(--s-4);
-}
 .qty {
   display: flex;
   align-items: center;
@@ -770,3 +849,15 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .total__plus { display: none; }
 body:has(input[data-delta]:checked) .total__base { display: none; }
 body:has(input[data-delta]:checked) .total__plus { display: inline; }
+
+/* ==========================================================================
+   Cifras de ancho fijo: solo donde el número cambia en su sitio (contadores)
+   o encabeza una columna (numerales de sección y de grupo). Va al final:
+   la abreviatura `font` de cada componente restablece la familia.
+   ========================================================================== */
+
+.section__no,
+.group__title::before,
+.stepper__qty,
+.qty__n,
+.add--on { font-family: var(--font-tabular); }

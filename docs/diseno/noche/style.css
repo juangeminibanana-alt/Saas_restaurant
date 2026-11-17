@@ -5,13 +5,16 @@
 
    Reglas del sistema
    · La fotografía es lo único que brilla; la interfaz es negra, plana y exacta.
-   · La brasa (--accent) significa "tu pedido": acción principal, cantidad
-     agregada y el aviso de una elección pendiente. La selección se marca con
-     tinta sólida, nunca con brasa.
-   · Sin sombras, sin degradados, sin desenfoques: sólo filetes de 1 px.
+   · La brasa (--accent) significa "tu pedido" y sólo existe como color sólido:
+     la acción principal, la cantidad agregada y el aviso de una elección
+     pendiente. Nunca como contorno. La selección se marca con tinta sólida.
+   · Sin sombras, sin resplandores, sin desenfoques: sólo filetes de 1 px.
+     El único degradado es el velo (--scrim) bajo el texto que va sobre una
+     fotografía; funde la portada con el fondo y no existe en ningún otro lado.
    · La fotografía se cura, no se filtra: cada foto declara su encuadre
      (--fp punto focal, --z acercamiento). Las miniaturas van en macro —el
      fondo desaparece— y sólo los mosaicos y las portadas enseñan la mesa.
+     Las fotos de luz alta se gradúan en el archivo (img/), no con CSS.
    ========================================================================== */
 
 :root {
@@ -30,16 +33,30 @@
   --on-accent:    #0B0B0C;                    /* texto sobre brasa   6.9 : 1  */
   --positive:     #3ECF8E;                    /* único semántico: "abierto"   */
 
+  /* Velo: sólo bajo texto sobre fotografía. Se mide desde el pie, en px, porque
+     el bloque de identidad (108 px) no cambia con la altura de la portada: el
+     antetítulo siempre cae sobre ≥ 88 % de fondo y la línea de datos sobre el
+     fondo exacto. Curva suavizada, sin banda: la foto no se corta, se apaga. */
+  --scrim: linear-gradient(to top,
+             #0B0B0C                32px,
+             rgba(11, 11, 12, 0.96) 72px,
+             rgba(11, 11, 12, 0.88) 108px,
+             rgba(11, 11, 12, 0.60) 140px,
+             rgba(11, 11, 12, 0.24) 172px,
+             rgba(11, 11, 12, 0)    208px);
+
   /* ---- Tipografía ----------------------------------------------------- */
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  /* Escala: 32 · 20 · 16 · 13 · 11 — interlíneas en múltiplos de 4 */
-  --t-display: 600 32px/36px var(--font-sans);   --tr-display: -0.035em;
+  /* Escala: 40 · 32 · 20 · 16 · 15 · 13 · 11 — interlíneas en múltiplos de 4 */
+  --t-hero:    600 40px/44px var(--font-sans);   --tr-hero:    -0.04em;   /* nombre del restaurante */
+  --t-display: 600 32px/36px var(--font-sans);   --tr-display: -0.035em;  /* nombre del platillo    */
   --t-title:   600 20px/24px var(--font-sans);   --tr-title:   -0.02em;
   --t-body:    500 16px/20px var(--font-sans);   --tr-body:    -0.011em;
+  --t-body-sm: 500 15px/20px var(--font-sans);   --tr-body-sm: -0.015em;  /* nombre en mosaico chico */
   --t-small:   400 13px/20px var(--font-sans);
-  --t-label:   500 11px/16px var(--font-mono);   --tr-label:    0.06em;
+  --t-label:   500 11px/16px var(--font-mono);   --tr-label:    0.06em;   --ws-label: -0.25em;
   --t-mono:    500 13px/20px var(--font-mono);   /* precios, conteos, tiempos */
   --t-mono-md: 500 16px/20px var(--font-mono);   --tr-mono:    -0.02em;
   --t-mono-lg: 500 20px/24px var(--font-mono);
@@ -51,6 +68,7 @@
   --tap: 44px;                                /* objetivo táctil mínimo       */
 
   /* ---- Radios (un sistema: interior = exterior − 4) ------------------- */
+  --r-xs: 4px;     /* ficha dentro de un control de 8  */
   --r-sm: 8px;     /* segmento activo, botón de fila   */
   --r-md: 12px;    /* controles, miniaturas            */
   --r-lg: 16px;    /* mosaicos                         */
@@ -58,16 +76,37 @@
   /* ---- "Sombras": filetes interiores, nunca resplandor ---------------- */
   --ring:        inset 0 0 0 1px var(--line);
   --ring-photo:  inset 0 0 0 1px var(--line-strong);
-  --ring-accent: inset 0 0 0 1px var(--accent);
   --edge-top:    inset 0 1px 0 var(--line);
   --edge-bottom: inset 0 -1px 0 var(--line);
   --edge-photo:  inset 0 -1px 0 var(--line-strong);
 
   /* ---- Composición ---------------------------------------------------- */
-  --cover-h: 200px;   /* portada del menú, casi 2:1                        */
-  --dish-h:  316px;   /* foto del platillo: el detalle completo cabe en 844 */
+  --cover-h: clamp(240px, calc(100vh - 528px), 316px);
+                      /* portada del menú, con la identidad dentro: 316 en un
+                         teléfono de 844 y menos en pantallas bajas, para que el
+                         mosaico grande siempre quepa entero sobre la barra   */
+  --dish-h:  clamp(280px, calc(100vh - 532px), 420px);
+                      /* foto del platillo: toda la altura que el resto deja libre
+                         (532 = texto + dos grupos + barra + aire) — 312 en un
+                         teléfono de 844, con las tres guarniciones a la vista   */
   --bar-h:    72px;   /* barra inferior                                    */
   --nav-h:    72px;   /* navegación pegada                                 */
+}
+
+@supports (height: 100svh) {
+  :root {
+    --cover-h: clamp(240px, calc(100svh - 528px), 316px);
+    --dish-h:  clamp(280px, calc(100svh - 532px), 420px);
+  }
+}
+
+/* Pantallas angostas (< 375): el nombre del platillo baja un paso para seguir
+   compartiendo renglón con su precio, y el del mosaico chico para caber en uno. */
+@media (max-width: 374px) {
+  :root {
+    --t-display: 600 28px/32px var(--font-sans);
+    --t-body-sm: 500 14px/20px var(--font-sans);
+  }
 }
 
 /* ==========================================================================
@@ -93,6 +132,7 @@ img { display: block; }
 .app { max-width: 430px; margin: 0 auto; min-height: 100vh; }
 .has-bar { padding-bottom: calc(var(--bar-h) + var(--s-6)); }   /* barra + aire */
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* sólo lectores de pantalla */
 
 /* Iconos: trazo único de 1.5 px, sin relleno, a cualquier tamaño */
 .i {
@@ -100,11 +140,16 @@ img { display: block; }
   fill: none; stroke: currentColor; stroke-width: 1.5;
   stroke-linecap: round; stroke-linejoin: round;
 }
-.i--sm { width: 16px; height: 16px; }
 .i * { vector-effect: non-scaling-stroke; }
 
+/* Datos en mono: precios, conteos, horas. Las unidades ("min") van en sans. */
 .price { font: var(--t-mono); color: var(--ink); }
-.label { font: var(--t-label); letter-spacing: var(--tr-label); text-transform: uppercase; color: var(--faint); }
+.num   { font: var(--t-mono); color: var(--ink); }
+.label {
+  font: var(--t-label); letter-spacing: var(--tr-label); word-spacing: var(--ws-label);
+  margin-right: calc(-1 * var(--tr-label));     /* el tracking final no cuenta: la tinta llega al margen */
+  text-transform: uppercase; color: var(--faint);
+}
 
 /* ==========================================================================
    Fotografía
@@ -112,6 +157,10 @@ img { display: block; }
    Encuadre por foto, sin filtros:  style="--fp: 60% 55%; --z: 1.12"
      --fp  punto focal: ese punto de la imagen queda en ese punto del marco
      --z   acercamiento alrededor del punto focal (1 = la foto completa)
+   ../fotos/ es la biblioteca curada. img/ guarda reexportaciones de esas
+   mismas fotos: la portada y la arrachera a mayor resolución (srcset, para
+   que nada se vea ampliado en pantallas 2x–3x) y las tres de luz alta ya
+   graduadas (−0.3 EV, −10 % de saturación).
    ========================================================================== */
 .ph { position: relative; display: block; overflow: hidden; background: var(--surface-2); }
 .ph > img {
@@ -124,40 +173,55 @@ img { display: block; }
   box-shadow: var(--ph-edge, var(--ring-photo)); pointer-events: none;
 }
 
-/* ---- Portada: a sangre, sin radio, sólo un filete al pie ---------------
-   La misma pieza abre el menú (.hero--cover) y el platillo (.hero--dish).  */
+/* ---- Portadas: a sangre, sin radio --------------------------------------
+   .hero--dish  la foto es el producto: entera, con un filete al pie.
+   .hero--cover la foto es la atmósfera: la identidad va encima, sobre el
+                velo, y la imagen se apaga en el fondo en vez de cortarse.   */
 .hero { --ph-edge: var(--edge-photo); height: var(--cover-h); }
 .hero--dish { height: var(--dish-h); }
+.hero--cover { --ph-edge: none; background: var(--bg); }
+.hero--cover::before {
+  content: ""; position: absolute; inset: 0; z-index: 1;
+  background: var(--scrim); pointer-events: none;
+}
 .hero__btn {
-  position: absolute; z-index: 1;
+  position: absolute; z-index: 2;
   top: max(var(--s-4), calc(env(safe-area-inset-top) + var(--s-2)));
   width: var(--tap); height: var(--tap); display: grid; place-items: center;
   background: var(--bg); border-radius: var(--r-md); box-shadow: var(--ring-photo); color: var(--ink);
 }
 .hero__btn--start { left: var(--gutter); }
-.hero__btn--end   { right: var(--gutter); }
 
 /* ==========================================================================
-   Identidad del restaurante
+   Identidad del restaurante — sobre la portada
+   Antetítulo en mono y nombre: el mismo patrón que abre el platillo. Debajo,
+   un solo filete y la ficha de datos repartida de margen a margen (estado ·
+   tiempo · calificación): cifras en mono, unidades en sans, sin iconos.
+   El h1 va primero en el código; el antetítulo sube con order.
    ========================================================================== */
-.id { padding: var(--s-6) var(--gutter) 0; }
-.id__name { font: var(--t-display); letter-spacing: var(--tr-display); }
-.id__tag  { margin-top: var(--s-1); font: 400 16px/20px var(--font-sans); letter-spacing: var(--tr-body); color: var(--muted); }
-
+.id {
+  position: absolute; z-index: 2; left: var(--gutter); right: var(--gutter); bottom: 0;
+  display: flex; flex-direction: column;
+}
+.id__tag  { order: -1; color: var(--muted); }
+.id__name {
+  margin-top: var(--s-1); margin-left: -0.075em;      /* compensación óptica: el asta cae en el margen */
+  font: var(--t-hero); letter-spacing: var(--tr-hero); text-wrap: balance;
+}
 .facts {
-  display: flex; align-items: center; gap: var(--s-3);
-  padding: var(--s-3) var(--gutter) 0;
-  font: var(--t-mono); color: var(--ink);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  margin-top: var(--s-3); padding-top: var(--s-3); box-shadow: var(--edge-top);
+  font: var(--t-small); color: var(--muted); white-space: nowrap;
 }
 .facts li { display: flex; align-items: center; gap: var(--s-2); }
-.facts li + li::before { content: ""; width: 1px; height: 12px; margin-right: var(--s-1); background: var(--line-strong); }
-.facts .i { color: var(--muted); }
-.facts__open { font: 500 13px/20px var(--font-sans); }
+.facts strong { font-weight: 500; color: var(--ink); }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--positive); }
 
 /* ==========================================================================
    Control segmentado
    Objetivo táctil de 44 px; la pastilla activa se dibuja 4 px adentro.
+   El ancho de cada segmento se reserva en seminegrita (::after invisible con
+   data-t): activar uno no mueve a los vecinos.
    ========================================================================== */
 .seg {
   display: flex; height: var(--tap);
@@ -169,44 +233,54 @@ img { display: block; }
   height: var(--tap); padding: 0 var(--s-3);
   font: 500 13px/20px var(--font-sans); color: var(--muted); white-space: nowrap;
 }
+.seg__item > span,
+.seg__item[data-t]::after { grid-area: 1 / 1; }
+.seg__item[data-t]::after { content: attr(data-t); font-weight: 600; visibility: hidden; }
 .seg__item.is-on { color: var(--on-select); font-weight: 600; }
 .seg__item.is-on::before {
   content: ""; position: absolute; inset: 4px; z-index: -1;
   border-radius: var(--r-sm); background: var(--select);
 }
 
-/* ---- Categorías: el mismo control, deslizable ---------------------------
-   Cada segmento mide lo que su texto; el carril sale a sangre por la derecha
-   para que la etiqueta cortada anuncie que hay más.                        */
+/* ---- Buscar + categorías: una sola fila, siempre pegada arriba ----------
+   Buscar vive aquí —no en la portada— para que siga a la mano al desplazar.
+   El carril desplaza una pista completa y cerrada (su propio filete y radio
+   en los cuatro lados); lo que asoma por el borde es la pista, no un corte. */
 .nav {
-  position: sticky; top: 0; z-index: 5;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; gap: var(--s-2);
   padding: var(--s-4) 0 var(--s-3) var(--gutter);
   background: var(--bg);
 }
 .nav.is-stuck { box-shadow: var(--edge-bottom); }
+.nav.is-stuck::before {            /* tapa la franja del área segura al pegarse */
+  content: ""; position: absolute; left: 0; right: 0; bottom: 100%;
+  height: env(safe-area-inset-top, 0px); background: var(--bg);
+}
+.nav__search {
+  flex: none; width: var(--tap); height: var(--tap);
+  display: grid; place-items: center;
+  background: var(--surface-1); border-radius: var(--r-md); box-shadow: var(--ring); color: var(--ink);
+}
 .seg--scroll {
-  position: relative; padding-right: var(--gutter);
-  border-radius: var(--r-md) 0 0 var(--r-md);
-  box-shadow: inset 1px 0 0 var(--line), var(--edge-top), var(--edge-bottom);
+  position: relative; flex: 1; min-width: 0; display: flex;
   overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
 }
 .seg--scroll::-webkit-scrollbar { display: none; }
-.seg--scroll .seg__item { flex: 0 0 auto; }
-/* el ancho del segmento se reserva en seminegrita: activar no mueve a los vecinos */
-.seg--scroll .seg__item > span,
-.seg--scroll .seg__item::after { grid-area: 1 / 1; }
-.seg--scroll .seg__item::after { content: attr(data-t); font-weight: 600; visibility: hidden; }
+.seg--scroll::after { content: ""; flex: none; width: var(--gutter); }   /* margen final al llegar al tope */
+.seg__track { flex: none; }
+.seg__track .seg__item { flex: 0 0 auto; padding: 0 var(--s-4); }
 
 /* ==========================================================================
    Secciones
    ========================================================================== */
-.section { padding: 0 var(--gutter); scroll-margin-top: var(--nav-h); }
+.section { padding: 0 var(--gutter); scroll-margin-top: calc(var(--nav-h) + env(safe-area-inset-top, 0px)); }
 .section + .section { margin-top: var(--s-8); }
 .section__head {
   display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-4);
   padding: var(--s-3) 0;
 }
-.section__title { font: var(--t-title); letter-spacing: var(--tr-title); }
+.section__title { margin-left: -1px; font: var(--t-title); letter-spacing: var(--tr-title); }
 
 /* ---- Bento destacado: uno grande, dos chicos -------------------------- */
 .bento { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
@@ -222,15 +296,17 @@ img { display: block; }
 .tile__media { --ph-edge: none; flex: none; height: 132px; }
 .tile--lg .tile__media { height: 240px; }
 /* todos los pies comparten margen (12) y el renglón del precio va al fondo:
-   un nombre a dos líneas no desalinea a su vecino */
+   la retícula iguala la altura de la fila, así que un nombre a dos líneas no
+   desalinea el precio de su vecino */
 .tile__cap { flex: 1; display: flex; flex-direction: column; padding: var(--s-3); box-shadow: var(--edge-top); }
 .tile__line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
 .tile__name {
-  font: var(--t-body); letter-spacing: var(--tr-body);
+  font: var(--t-body-sm); letter-spacing: var(--tr-body-sm);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
 }
+.tile--lg .tile__name { font: var(--t-body); letter-spacing: var(--tr-body); }
 .tile__price { flex: none; font: var(--t-mono-md); letter-spacing: var(--tr-mono); }
-.tile__meta { margin-top: auto; display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-2); color: var(--muted); }
+.tile__meta { margin-top: auto; color: var(--muted); }
 
 /* ---- Filas de platillo -------------------------------------------------
    Foto 80 · texto arriba (la altura de mayúsculas coincide con el borde de
@@ -273,8 +349,13 @@ img { display: block; }
 }
 .stepper button[disabled] { color: var(--faint); cursor: default; }
 .stepper output { width: 28px; text-align: center; font: var(--t-mono); color: var(--ink); }
-.stepper--on { box-shadow: var(--ring-accent); }          /* ya está en tu pedido */
-.stepper--on output { color: var(--accent); }
+/* Ya está en tu pedido: el filete sigue neutro y la cantidad es una ficha
+   sólida de brasa, dibujada 4 px adentro como la pastilla del segmentado.  */
+.stepper--on output {
+  width: 24px; height: 24px; margin: 0 2px; border-radius: var(--r-xs);
+  background: var(--accent); color: var(--on-accent);
+  font-weight: 600; line-height: 24px;
+}
 
 .stepper--lg { flex: none; width: 120px; height: 48px; justify-content: space-between; background: var(--surface-2); border-radius: var(--r-md); }
 .stepper--lg button { margin: 0; height: 48px; }
@@ -301,27 +382,34 @@ img { display: block; }
   font: 600 16px/20px var(--font-sans); letter-spacing: var(--tr-body);
 }
 .btn .mono { font: 600 16px/20px var(--font-mono); letter-spacing: var(--tr-mono); }
-.btn .sep { opacity: 0.6; }
 
 /* ==========================================================================
    Detalle de platillo
    ========================================================================== */
 .dish__head { padding: var(--s-5) var(--gutter) 0; }
 .dish__line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-4); margin-top: var(--s-1); }
-.dish__name { font: var(--t-display); letter-spacing: var(--tr-display); }
+.dish__name { margin-left: -0.03em; font: var(--t-display); letter-spacing: var(--tr-display); }   /* compensación óptica */
 .dish__price { flex: none; font: var(--t-mono-lg); letter-spacing: var(--tr-mono); }
 .dish__desc { margin-top: var(--s-2); font: 400 16px/24px var(--font-sans); letter-spacing: var(--tr-body); color: var(--muted); }
 
 .group { padding: var(--s-6) var(--gutter) 0; }
 .group__head { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: var(--s-3); }
 .group__title { font: 600 16px/20px var(--font-sans); letter-spacing: var(--tr-body); }
-/* La brasa avisa sólo mientras falta elegir; resuelto el grupo, se apaga. */
-.label--req { position: relative; color: var(--muted); }
-.group:not(.is-done) .label--req { padding-left: var(--s-3); }
+/* La brasa avisa sólo mientras falta elegir; resuelto el grupo (.is-done), se
+   apaga y la etiqueta vuelve a ser una etiqueta más. */
+.label--req { position: relative; }
+.group:not(.is-done) .label--req { padding-left: var(--s-3); color: var(--ink); }
 .group:not(.is-done) .label--req::before {
   content: ""; position: absolute; left: 0; top: 50%; margin-top: -3px;
   width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
 }
+
+/* Los dos grupos son elecciones del mismo rango: misma altura de fila (48)
+   y mismo cuerpo (16) en el segmentado y en la lista. El relleno mínimo es 4;
+   el sobrante se reparte, así que las cuatro etiquetas caben desde 320 px. */
+.group .seg { height: 48px; }
+.group .seg__item { height: 48px; padding: 0 var(--s-1); font: var(--t-body); letter-spacing: var(--tr-body); }
+.group .seg__item.is-on { font-weight: 600; }
 
 .opts { background: var(--surface-1); border-radius: var(--r-md); box-shadow: var(--ring); }
 .opt {
@@ -331,7 +419,7 @@ img { display: block; }
 }
 .opt + .opt { box-shadow: var(--edge-top); }
 .opt__name { flex: 1; }
-.opt__delta { font: var(--t-mono); color: var(--ink); }
+.opt__delta { font: var(--t-mono); letter-spacing: 0; color: var(--ink); }
 .radio {
   width: 20px; height: 20px; flex: none; border-radius: 50%;
   box-shadow: inset 0 0 0 1.5px var(--faint);

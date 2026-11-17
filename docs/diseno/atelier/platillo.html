@@ -12,17 +12,31 @@
 </head>
 <body class="has-dock">
 
-<figure class="hero">
-  <img src="../fotos/arrachera_papas.jpg" alt="Arrachera rebanada con papas a la francesa y hierbas frescas en plato blanco">
-  <a class="hero__back" href="menu.html" aria-label="Volver al menú">
-    <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 10h-13M8.5 4.5L3 10l5.5 5.5"/></svg>
-  </a>
-</figure>
-
 <main class="page">
 
+  <!-- la misma cabecera del menú: una fila de 44 y la lámina debajo.
+       A la izquierda, el regreso dice a dónde vuelve; a la derecha firma la casa (o su logotipo). -->
+  <header class="masthead">
+    <div class="masthead__top">
+      <a class="back" href="menu.html#parrilla" aria-label="Volver al menú, De la parrilla">
+        <svg class="icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 10h-13M8.5 4.5L3 10l5.5 5.5"/></svg>
+        <span class="label">De la parrilla</span>
+      </a>
+      <p class="label label--ink label--end">Brasa Demo</p>
+    </div>
+  </header>
+
+  <!-- la lámina abierta del menú, sin cambiar de tamaño: 342 × 272.
+       La foto se pinta a 408 de ancho (3:2 recortada a 5:4): la de catálogo (900) alcanza hasta 2x;
+       a 3x el navegador toma la versión de 1368 y ninguna pantalla la amplía. -->
+  <figure class="plate-frame plate-frame--open">
+    <img src="../fotos/arrachera_papas.jpg"
+         srcset="../fotos/arrachera_papas.jpg 900w, fotos-3x/arrachera_papas-1368.jpg 1368w"
+         sizes="calc((min(100vw, 480px) - 48px) * 1.2)"
+         alt="Arrachera rebanada con papas a la francesa y hierbas frescas en plato blanco">
+  </figure>
+
   <header class="open__head">
-    <p class="label">03 · De la parrilla</p>
     <div class="open__title">
       <h1>Arrachera al carbón</h1>
       <p class="price">$345</p>
@@ -55,14 +69,15 @@
       </div>
     </section>
 
-    <!-- opcional: la guarnición incluida ya viene elegida; cambiarla es decisión del comensal -->
+    <!-- una guarnición va incluida en el precio: viene elegida la de la casa y se puede cambiar.
+         Solo la que cuesta más lo dice, y el total del botón la sigue. -->
     <section class="group" role="radiogroup" aria-labelledby="g-guarnicion">
       <header class="group__head">
         <h2 class="group__title" id="g-guarnicion">Guarnición</h2>
-        <p class="label label--end">Elige una</p>
+        <p class="label label--end">Elige una · incluida</p>
       </header>
       <ul class="options">
-        <li><label class="option"><input class="sr-only" type="radio" name="guarnicion" value="papas" checked><span class="option__name">Papas a la francesa</span><span class="option__delta option__delta--none">Incluida</span><span class="radio" aria-hidden="true"></span></label></li>
+        <li><label class="option"><input class="sr-only" type="radio" name="guarnicion" value="papas" checked><span class="option__name">Papas a la francesa</span><span class="radio" aria-hidden="true"></span></label></li>
         <li><label class="option"><input class="sr-only" type="radio" name="guarnicion" value="ensalada"><span class="option__name">Ensalada verde</span><span class="radio" aria-hidden="true"></span></label></li>
         <li><label class="option"><input class="sr-only" type="radio" name="guarnicion" value="esquites" data-delta="25"><span class="option__name">Esquites</span><span class="option__delta">+$25</span><span class="radio" aria-hidden="true"></span></label></li>
       </ul>
@@ -73,7 +88,7 @@
 </main>
 
 <div class="dock">
-  <div class="order">
+  <div class="dock__row">
     <div class="qty" role="group" aria-label="Cantidad">
       <button class="qty__btn" type="button" aria-label="Quitar uno">
         <svg class="icon icon--sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg>
