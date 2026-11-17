@@ -218,6 +218,7 @@ internal class KitchenBoardState(
                                         NotifyKind.NEW_ORDER,
                                         "Nuevo pedido ${o.number}",
                                         "${o.type.label()}$where · ${o.lines.sumOf { it.quantity }} platillos",
+                                        "new:${o.id}",
                                     )
                                 }
                                 is RealtimeEvent.OrderUpdated -> merge(event.order)

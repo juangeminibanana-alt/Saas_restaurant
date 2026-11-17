@@ -33,5 +33,11 @@ actual fun saveApiBaseUrl(url: String?) {
 actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
 }
 
-actual fun notifyUser(kind: NotifyKind, title: String, body: String) {
+actual fun notifyUser(kind: NotifyKind, title: String, body: String, dedupKey: String?) {
+}
+
+actual fun syncStaffAlerts(baseUrl: String?, token: String?, role: String?) {
+}
+
+actual fun syncOrderAlerts(baseUrl: String?, orderId: String?, orderNumber: String?) {
 }

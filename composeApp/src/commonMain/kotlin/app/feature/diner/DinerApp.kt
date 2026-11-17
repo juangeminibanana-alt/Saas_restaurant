@@ -201,7 +201,13 @@ private fun DinerContent(state: DinerState, tenant: TenantPublic, onExit: () -> 
     // Sigue el pedido en curso desde cualquier pantalla del menú: así llegan los avisos de "en preparación" y "listo".
     val trackedOrderId = state.activeOrder?.id
     LaunchedEffect(trackedOrderId) {
-        val id = trackedOrderId ?: return@LaunchedEffect
+        val id = trackedOrderId
+        if (id == null) {
+            app.platform.syncOrderAlerts(null, null, null)
+            return@LaunchedEffect
+        }
+        // Con servidor real, el pedido también se sigue en segundo plano (avisos con la app minimizada).
+        app.platform.syncOrderAlerts(if (repo.isRemote) app.platform.defaultApiBaseUrl() else null, id, state.activeOrder?.number)
         try {
             repo.trackOrder(id).collect { updated -> state.recordOrder(updated) }
         } catch (ce: CancellationException) {

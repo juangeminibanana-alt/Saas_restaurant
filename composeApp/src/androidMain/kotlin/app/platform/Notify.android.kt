@@ -18,8 +18,10 @@ private var nextNotificationId = 1000
  * El sonido lo reproduce la app (suena aunque no se haya dado permiso de notificaciones); el canal de la
  * notificación va sin sonido para que no suene doble, pero vibra.
  */
-actual fun notifyUser(kind: NotifyKind, title: String, body: String) {
+actual fun notifyUser(kind: NotifyKind, title: String, body: String, dedupKey: String?) {
     val context = AndroidPlatform.appContext ?: return
+    // La pantalla abierta y el servicio en segundo plano escuchan el mismo evento: se avisa una sola vez.
+    if (dedupKey != null && !app.alerts.AlertDedup.firstTime(dedupKey)) return
     runCatching { playSound(context, kind) }
     runCatching { postNotification(context, kind, title, body) }
 }

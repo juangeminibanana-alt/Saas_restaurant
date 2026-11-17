@@ -210,9 +210,9 @@ class DinerState(val route: DinerRoute) {
         val previous = if (index >= 0) history[index].status else null
         if (previous != null && previous != order.status) {
             when (order.status) {
-                OrderStatus.PREPARING -> notifyUser(NotifyKind.ORDER_UPDATE, "Pedido ${order.number}", "Ya lo estamos preparando.")
-                OrderStatus.READY -> notifyUser(NotifyKind.ORDER_READY, "¡Tu pedido ${order.number} está listo!", "Ya puedes disfrutarlo.")
-                OrderStatus.COMPLETED -> notifyUser(NotifyKind.ORDER_UPDATE, "Pedido ${order.number} entregado", "¡Buen provecho!")
+                OrderStatus.PREPARING -> notifyUser(NotifyKind.ORDER_UPDATE, "Pedido ${order.number}", "Ya lo estamos preparando.", "st:${order.id}:${order.status}")
+                OrderStatus.READY -> notifyUser(NotifyKind.ORDER_READY, "¡Tu pedido ${order.number} está listo!", "Ya puedes disfrutarlo.", "st:${order.id}:${order.status}")
+                OrderStatus.COMPLETED -> notifyUser(NotifyKind.ORDER_UPDATE, "Pedido ${order.number} entregado", "¡Buen provecho!", "st:${order.id}:${order.status}")
                 else -> Unit
             }
         }

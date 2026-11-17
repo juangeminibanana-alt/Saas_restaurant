@@ -31,4 +31,10 @@ expect fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit)
 enum class NotifyKind { NEW_ORDER, ORDER_READY, ORDER_UPDATE }
 
 /** Aviso con sonido propio y notificación del sistema (Android). En las demás plataformas no hace nada todavía. */
-expect fun notifyUser(kind: NotifyKind, title: String, body: String)
+expect fun notifyUser(kind: NotifyKind, title: String, body: String, dedupKey: String? = null)
+
+/** Mantiene (o detiene, con token nulo) la escucha de pedidos nuevos en segundo plano para el personal. */
+expect fun syncStaffAlerts(baseUrl: String?, token: String?, role: String?)
+
+/** Sigue (o deja de seguir, con orderId nulo) el pedido en curso del comensal en segundo plano. */
+expect fun syncOrderAlerts(baseUrl: String?, orderId: String?, orderNumber: String?)

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.data.createRepository
 import app.platform.PlatformBackHandler
+import app.platform.defaultApiBaseUrl
+import app.platform.syncStaffAlerts
 import app.shared.data.AppRepository
 import app.shell.AppNavigator
 import app.shell.DemoSwitcher
@@ -61,6 +64,12 @@ fun App(initialRoute: String = "/", standalone: Boolean = false) {
                     LoadingState(Modifier.fillMaxSize())
                 } else {
                     CompositionLocalProvider(LocalRepo provides current) {
+                        // Con servidor real y sesión de cocina, los pedidos nuevos se escuchan también en segundo plano.
+                        LaunchedEffect(current) {
+                            current.session.collect { s ->
+                                syncStaffAlerts(if (current.isRemote) defaultApiBaseUrl() else null, s?.token, s?.role?.name)
+                            }
+                        }
                         // "Atrás" del sistema: regresa a la ruta anterior; en la raíz deja que el sistema cierre la app.
                         val currentRoute = navigator.route
                         PlatformBackHandler(enabled = currentRoute.isNotEmpty() && navigator.canGoBack) { navigator.back() }
