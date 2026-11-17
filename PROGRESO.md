@@ -1,6 +1,6 @@
 # Progreso — sesión del 17 de noviembre de 2026
 
-Corte de la sesión: 01:00 am CDMX (hora límite 01:45). Rama: `ccr-4c70e3a3-vbrm7i`.
+Corte de la sesión: 00:58 am CDMX (hora límite 01:45). Rama: `ccr-4c70e3a3-vbrm7i`.
 
 ## Resumen
 
@@ -35,6 +35,7 @@ pero nadie lo ha usado todavía.
 | Consola del operador: Resumen con métricas | Navegador, con datos del backend |
 | Sitio de venta: encabezado y hero | Navegador |
 | Login por roles | Operador, dueño y cocina entran; cocina y caja ya pueden leer la marca (antes daba 403, corregido) |
+| Backend por API (20 llamadas con `curl`) | Operador: métricas, listar, **crear** y **suspender** restaurante (el menú público del suspendido responde 403); permisos por rol (dueño no entra a operador, caja no edita marca, sin token 401); Mercado Pago en modo demostración (estado y conectar); integraciones; pedido simulado de Uber Eats que entra a cocina; registro de restaurante; planes; estadísticas; cambio de estado y reembolso de un pedido |
 
 ### Escrito y compila, pero **sin ejercitar**
 
@@ -42,8 +43,10 @@ pero nadie lo ha usado todavía.
 - Consola del operador: Restaurantes (crear / suspender / cambiar plan), Planes, Suscripciones, Soporte, Credenciales.
 - Sitio de venta: beneficios, planes, preguntas y flujo de registro.
 - Comensal: "Mis pedidos", pedir de nuevo, detalle de platillo con modificadores, espera de pago externo.
-- Backend: OAuth de Mercado Pago, preferencias con `marketplace_fee`, preapproval, webhooks con firma,
-  reembolsos, registro de restaurantes, conectores Lalamove / Uber Eats / Rappi / DiDi Food (interfaces + mocks).
+- Backend contra Mercado Pago real: OAuth, preferencias con `marketplace_fee`, preapproval, validación de firma
+  del webhook y reembolso real (en modo demostración sí responden; ver tabla de arriba). Cliente de Lalamove y
+  conectores de Uber Eats / Rappi / DiDi Food: interfaces y mocks, sin llamadas reales.
+- Las **pantallas** del panel y del operador que usan esos endpoints (la API sí quedó probada).
 - App de escritorio: compila, pero **nunca se abrió una ventana** (este entorno no tiene pantalla).
 
 ### No hecho
