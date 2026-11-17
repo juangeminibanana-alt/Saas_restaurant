@@ -41,7 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -483,7 +483,7 @@ private fun TabbedBoard(
     now: () -> Long,
     loading: Boolean,
 ) {
-    var selected by rememberSaveable { mutableIntStateOf(0) }
+    var selected by rememberSaveable { mutableStateOf(0) }
     val tabs = KitchenStage.entries.map { stage -> stage.title + " · " + columns[stage.ordinal].size }
     Column(modifier = Modifier.fillMaxSize()) {
         CategoryTabs(
