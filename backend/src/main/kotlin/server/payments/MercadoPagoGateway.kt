@@ -3,6 +3,7 @@ package server.payments
 import app.shared.api.ApiRoutes
 import app.shared.api.AppJson
 import app.shared.model.Order
+import app.shared.model.OrderChannel
 import app.shared.model.PaymentInfo
 import app.shared.model.PaymentMethod
 import app.shared.model.Plan
@@ -271,8 +272,11 @@ object MercadoPagoGateway : PaymentGateway {
     }
 
     override suspend fun refund(tenantId: String, order: Order): Boolean {
+        // Pagos simulados y pedidos de marketplaces no movieron dinero en Mercado Pago: no hay nada que devolver aquí.
+        val known = order.payment?.providerPaymentId
+        if (order.channel != OrderChannel.DIRECT || known?.startsWith("sim-") == true) return true
         val conn = sellerConnection(tenantId) ?: return false
-        val paymentId = order.payment?.providerPaymentId ?: findApprovedPaymentId(conn, order.id) ?: return false
+        val paymentId = known ?: findApprovedPaymentId(conn, order.id) ?: return false
         MpHttp.call(
             HttpMethod.Post, "/v1/payments/${paymentId.encodeURLParameter()}/refunds", conn.accessToken,
             body = buildJsonObject { }, idempotencyKey = "refund-${order.id}",

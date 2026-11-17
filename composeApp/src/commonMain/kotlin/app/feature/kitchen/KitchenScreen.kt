@@ -137,6 +137,7 @@ internal fun KitchenScreen(
             columns = columns,
             pending = pending,
             live = board.live,
+            connectedOnce = board.connectedOnce,
             now = now,
             compact = compact,
             expanded = expanded,
@@ -147,6 +148,7 @@ internal fun KitchenScreen(
             activeCount = activeCount,
             pending = pending,
             live = board.live,
+            connectedOnce = board.connectedOnce,
             now = now,
             compact = compact,
         )
@@ -176,6 +178,7 @@ private fun KitchenHeader(
     columns: List<List<Order>>,
     pending: List<Order>,
     live: Boolean,
+    connectedOnce: Boolean,
     now: () -> Long,
     compact: Boolean,
     expanded: Boolean,
@@ -219,7 +222,7 @@ private fun KitchenHeader(
             }
             if (!compact) {
                 LongestWait(pending = pending, now = now)
-                LiveIndicator(live = live)
+                LiveIndicator(live = live, connectedOnce = connectedOnce)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AppIconButton(
@@ -290,7 +293,7 @@ private fun AnimatedCount(count: Int, style: TextStyle, color: Color) {
 
 /** Indicador de conexión: punto que pulsa mientras llegan pedidos en tiempo real. */
 @Composable
-private fun LiveIndicator(live: Boolean, modifier: Modifier = Modifier) {
+private fun LiveIndicator(live: Boolean, connectedOnce: Boolean, modifier: Modifier = Modifier) {
     val colors = AppTheme.colors
     val tone by animateColorAsState(if (live) colors.success else colors.warning, tween(Motion.BASE))
     val soft by animateColorAsState(if (live) colors.successSoft else colors.warningSoft, tween(Motion.BASE))
@@ -313,7 +316,11 @@ private fun LiveIndicator(live: Boolean, modifier: Modifier = Modifier) {
             drawCircle(color = tone, radius = radius * 0.45f)
         }
         AppText(
-            text = if (live) "En vivo" else "Reconectando…",
+            text = when {
+                live -> "En vivo"
+                connectedOnce -> "Reconectando…"
+                else -> "Conectando…"
+            },
             style = AppTheme.type.label.copy(fontWeight = FontWeight.SemiBold),
             color = tone,
             maxLines = 1,
@@ -359,6 +366,7 @@ private fun KitchenSummary(
     activeCount: Int,
     pending: List<Order>,
     live: Boolean,
+    connectedOnce: Boolean,
     now: () -> Long,
     compact: Boolean,
 ) {
@@ -377,7 +385,7 @@ private fun KitchenSummary(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Space.x3),
     ) {
-        if (compact) LiveIndicator(live = live)
+        if (compact) LiveIndicator(live = live, connectedOnce = connectedOnce)
         SummaryStat(
             icon = AppIcons.Receipt,
             label = "Pedidos activos",

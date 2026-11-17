@@ -29,7 +29,7 @@ internal object MpStore {
     fun read(c: Connection, tenantId: String): MpConnection? =
         c.prepareStatement(
             "SELECT tenant_id::text, mp_user_id, access_token, refresh_token, public_key, live_mode, expires_at " +
-                "FROM mp_connections WHERE tenant_id::text = ?",
+                "FROM mp_connections WHERE tenant_id = ?::uuid",
         ).use { ps ->
             ps.setString(1, tenantId)
             ps.executeQuery().use { rs ->
@@ -65,7 +65,7 @@ internal object MpStore {
     }
 
     fun remove(c: Connection, tenantId: String) {
-        c.prepareStatement("DELETE FROM mp_connections WHERE tenant_id::text = ?").use { ps ->
+        c.prepareStatement("DELETE FROM mp_connections WHERE tenant_id = ?::uuid").use { ps ->
             ps.setString(1, tenantId)
             ps.executeUpdate()
         }
@@ -85,7 +85,7 @@ internal object MpStore {
     suspend fun tenantInfo(tenantId: String): TenantPayInfo? = Db.adminTx { c ->
         c.prepareStatement(
             "SELECT t.id::text, t.slug, t.name, COALESCE(p.fee_bps, 150) FROM tenants t " +
-                "LEFT JOIN plans p ON p.id = t.plan_id WHERE t.id::text = ?",
+                "LEFT JOIN plans p ON p.id = t.plan_id WHERE t.id = ?::uuid",
         ).use { ps ->
             ps.setString(1, tenantId)
             ps.executeQuery().use { rs ->
@@ -95,7 +95,7 @@ internal object MpStore {
     }
 
     suspend fun setPreapprovalId(tenantId: String, preapprovalId: String) = Db.adminTx { c ->
-        c.prepareStatement("UPDATE tenants SET mp_preapproval_id = ? WHERE id::text = ?").use { ps ->
+        c.prepareStatement("UPDATE tenants SET mp_preapproval_id = ? WHERE id = ?::uuid").use { ps ->
             ps.setString(1, preapprovalId)
             ps.setString(2, tenantId)
             ps.executeUpdate()
@@ -105,10 +105,10 @@ internal object MpStore {
     /** Actualiza el estado del tenant por su id o, si no viene, por el id de la suscripción. */
     suspend fun setTenantStatus(tenantId: String?, preapprovalId: String, status: String): Int = Db.adminTx { c ->
         c.prepareStatement(
-            "UPDATE tenants SET status = ? WHERE (id::text = ? OR mp_preapproval_id = ?) AND status <> 'SUSPENDED'",
+            "UPDATE tenants SET status = ? WHERE (id = ?::uuid OR mp_preapproval_id = ?) AND status <> 'SUSPENDED'",
         ).use { ps ->
             ps.setString(1, status)
-            ps.setString(2, tenantId ?: "")
+            ps.setString(2, tenantId)
             ps.setString(3, preapprovalId)
             ps.executeUpdate()
         }

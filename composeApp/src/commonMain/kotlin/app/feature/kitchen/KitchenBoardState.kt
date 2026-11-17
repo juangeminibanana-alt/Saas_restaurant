@@ -16,7 +16,9 @@ import app.ui.components.Tone
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /** Las tres columnas del tablero y la acción que mueve un pedido a la siguiente. */
@@ -66,6 +68,7 @@ internal object KitchenTiming {
     const val EXIT_MS = 320
     const val GLOW_MS = 3_600L
     const val RECONNECT_MS = 3_000L
+    const val LIVE_SETTLE_MS = 450L
 
     /** 0 = a tiempo, 1 = atención, 2 = retrasado. */
     fun level(seconds: Long): Int = when {
@@ -121,6 +124,10 @@ internal class KitchenBoardState(
     var error by mutableStateOf<String?>(null)
         private set
     var live by mutableStateOf(false)
+        private set
+
+    /** false hasta la primera conexión (para decir "Conectando…" en vez de "Reconectando…"). */
+    var connectedOnce by mutableStateOf(false)
         private set
 
     val isEmpty: Boolean get() = orders.isEmpty()
@@ -190,16 +197,27 @@ internal class KitchenBoardState(
     private suspend fun collectLive() {
         while (true) {
             try {
-                live = true
-                repo.kitchenEvents().collect { event ->
-                    live = true
-                    when (event) {
-                        is RealtimeEvent.OrderCreated -> merge(event.order)
-                        is RealtimeEvent.OrderUpdated -> merge(event.order)
+                coroutineScope {
+                    // "En vivo" cuando la suscripción aguanta abierta un instante o llega el primer evento.
+                    val settle = launch {
+                        delay(KitchenTiming.LIVE_SETTLE_MS)
+                        markLive()
+                    }
+                    try {
+                        repo.kitchenEvents().collect { event ->
+                            markLive()
+                            when (event) {
+                                is RealtimeEvent.OrderCreated -> merge(event.order)
+                                is RealtimeEvent.OrderUpdated -> merge(event.order)
+                            }
+                        }
+                    } finally {
+                        settle.cancel()
                     }
                 }
             } catch (e: CancellationException) {
-                throw e
+                // Si nos cancelaron a nosotros, salimos; si solo se cerró el canal, reconectamos.
+                currentCoroutineContext().ensureActive()
             } catch (e: Exception) {
                 // Se cayó la conexión: se reintenta abajo.
             }
@@ -207,6 +225,11 @@ internal class KitchenBoardState(
             delay(KitchenTiming.RECONNECT_MS)
             loadSnapshot(initial = false)
         }
+    }
+
+    private fun markLive() {
+        live = true
+        connectedOnce = true
     }
 
     /** Aplica un pedido que llegó por evento o como respuesta de una acción. */

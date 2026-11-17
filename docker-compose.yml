@@ -1,0 +1,39 @@
+# Infraestructura local: PostgreSQL 16 (con roles y base listos) + Redis 7.
+#   docker compose up -d
+# El backend corre aparte (ver backend/README.md) y se conecta con los defaults de desarrollo.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_dev}
+      DB_NAME: ${DB_NAME:-saas}
+      DB_ADMIN_USER: ${DB_ADMIN_USER:-saas_admin}
+      DB_ADMIN_PASSWORD: ${DB_ADMIN_PASSWORD:-saas_admin_dev}
+      DB_APP_USER: ${DB_APP_USER:-saas_app}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:-saas_app_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Bootstrap de roles + base (solo en el primer arranque, con el volumen vacío).
+      - ./scripts/dev-db.sh:/docker-entrypoint-initdb.d/10-dev-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:

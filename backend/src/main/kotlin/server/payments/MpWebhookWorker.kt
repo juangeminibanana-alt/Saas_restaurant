@@ -114,7 +114,7 @@ internal object MpWebhookWorker {
             "paused", "cancelled" -> "PAST_DUE"
             else -> return "sin cambio: estado ${sub.status}"
         }
-        val tenantRef = sub.externalReference?.takeIf { Regex("^[0-9a-fA-F-]{36}$").matches(it) }
+        val tenantRef = sub.externalReference?.takeIf { isUuid(it) }
         val rows = MpStore.setTenantStatus(tenantRef, sub.id, status)
         return "tenant ${tenantRef ?: "(por preapproval)"} -> $status ($rows fila/s)"
     }

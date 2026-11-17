@@ -12,6 +12,11 @@ internal fun hmacSha256Hex(secret: String, data: String): String {
     return mac.doFinal(data.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
 }
 
+private val UUID_RE = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+/** Los ids de tenant son uuid; cualquier otra cosa se descarta antes de llegar a SQL. */
+internal fun isUuid(value: String?): Boolean = value != null && UUID_RE.matches(value)
+
 internal fun constantTimeEquals(a: String, b: String): Boolean =
     MessageDigest.isEqual(a.toByteArray(Charsets.UTF_8), b.toByteArray(Charsets.UTF_8))
 
@@ -37,7 +42,7 @@ internal object OAuthState {
         val text = runCatching { String(dec.decode(payload), Charsets.UTF_8) }.getOrNull() ?: return null
         val tenantId = text.substringBefore('|')
         val exp = text.substringAfter('|', "").toLongOrNull() ?: return null
-        return if (exp >= now && tenantId.isNotBlank()) tenantId else null
+        return if (exp >= now && isUuid(tenantId)) tenantId else null
     }
 }
 

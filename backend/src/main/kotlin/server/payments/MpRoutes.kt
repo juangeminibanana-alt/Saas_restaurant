@@ -103,7 +103,7 @@ internal fun Route.mercadoPagoRoutes() {
 
         val topic = (body.str("type") ?: body.str("topic") ?: q["type"] ?: q["topic"] ?: "").lowercase()
         val dataId = q["data.id"] ?: body.obj("data").str("id") ?: q["id"] ?: body.str("id") ?: ""
-        val tenantId = q["tenant"]?.takeIf { TENANT_ID.matches(it) }
+        val tenantId = q["tenant"]?.takeIf { isUuid(it) }
         val action = body.str("action") ?: ""
 
         val signatureOk = MpWebhookSignature.isValid(
@@ -142,5 +142,3 @@ internal fun Route.mercadoPagoRoutes() {
         call.respondText("""{"ok":true}""", ContentType.Application.Json)
     }
 }
-
-private val TENANT_ID = Regex("^[0-9a-fA-F-]{36}$")
