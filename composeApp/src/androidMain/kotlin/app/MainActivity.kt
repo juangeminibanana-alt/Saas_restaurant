@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import app.platform.AndroidPlatform
+import com.whitelabel.restaurantes.R
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -12,8 +13,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AndroidPlatform.appContext = applicationContext
         setContent {
-            // En el teléfono se abre el índice de la demo para poder entrar a las cinco apps.
-            App(initialRoute = "/demo")
+            // Cada APK (sabor de Gradle) define con qué app abre y si es una app independiente.
+            App(
+                initialRoute = getString(R.string.start_route),
+                standalone = getString(R.string.standalone) == "true",
+            )
         }
     }
 }

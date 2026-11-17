@@ -14,3 +14,9 @@ expect fun defaultApiBaseUrl(): String
 
 /** Opens a URL outside the app (browser tab / system browser). */
 expect fun openExternalUrl(url: String)
+
+/** Dirección del servidor guardada por la persona en este dispositivo (null = usar la predeterminada). */
+expect fun savedApiBaseUrl(): String?
+
+/** Guarda (o borra con null) la dirección del servidor para este dispositivo. */
+expect fun saveApiBaseUrl(url: String?)

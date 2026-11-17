@@ -16,3 +16,11 @@ actual fun openExternalUrl(url: String) {
     val nsUrl = NSURL.URLWithString(url) ?: return
     UIApplication.sharedApplication.openURL(nsUrl, options = emptyMap<Any?, Any>(), completionHandler = null)
 }
+
+private var apiBaseOverride: String? = null
+
+actual fun savedApiBaseUrl(): String? = apiBaseOverride
+
+actual fun saveApiBaseUrl(url: String?) {
+    apiBaseOverride = url
+}

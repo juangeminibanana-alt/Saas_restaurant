@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import app.shared.api.CartLineRequest
 import app.shared.api.CreateOrderRequest
 import app.shared.model.Menu
@@ -60,6 +61,12 @@ data class CartLine(
 enum class DinerScreen { MENU, CART, WAITING, TRACKING, HISTORY }
 enum class PayPhase { IDLE, CREATING, SANDBOX, PROCESSING, SUCCESS }
 
+/**
+ * Pedidos de la visita por restaurante. Viven mientras viva la app (no solo la pantalla del menú),
+ * para que "Mis pedidos" no se vacíe al salir del menú y volver a entrar.
+ */
+private val sessionHistory = mutableMapOf<String, SnapshotStateList<Order>>()
+
 @Stable
 class DinerState(val route: DinerRoute) {
     // ── Carga
@@ -100,7 +107,7 @@ class DinerState(val route: DinerRoute) {
     var pendingOrder by mutableStateOf<Order?>(null)
     var activeOrder by mutableStateOf<Order?>(null)
     var checkoutUrl by mutableStateOf<String?>(null)
-    val history = mutableStateListOf<Order>()
+    val history: SnapshotStateList<Order> = sessionHistory.getOrPut(route.slug) { mutableStateListOf() }
 
     val itemCount: Int get() = cart.sumOf { it.quantity }
     val subtotalCents: Long get() = cart.sumOf { it.totalCents }

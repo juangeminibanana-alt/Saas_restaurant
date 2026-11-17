@@ -73,6 +73,16 @@ fun DinerApp(slug: String, onExit: () -> Unit) {
             state.menu = menu
             state.applyTenantDefaults(tenant)
             state.loadedAt = nowMillis()
+            // Al volver a entrar al menú, refresca el estado de los pedidos de esta visita (la cocina pudo avanzarlos).
+            for (previous in state.history.toList()) {
+                try {
+                    state.recordOrder(repo.getOrder(previous.id))
+                } catch (ce: CancellationException) {
+                    throw ce
+                } catch (e: Exception) {
+                    // Se queda con el último estado conocido.
+                }
+            }
             val orderId = route.orderId
             if (orderId != null && state.activeOrder == null) {
                 try {

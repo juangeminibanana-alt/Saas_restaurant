@@ -116,6 +116,23 @@ if (hasAndroidSdk) {
         packaging {
             resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
         }
+        // Un APK por app (más uno con todo junto). Cada sabor define su id, su nombre y con qué pantalla abre.
+        flavorDimensions += "app"
+        productFlavors {
+            fun app(name: String, label: String, startRoute: String, standalone: Boolean) = create(name) {
+                dimension = "app"
+                if (standalone) applicationIdSuffix = ".$name"
+                resValue("string", "app_name", label)
+                resValue("string", "start_route", startRoute)
+                resValue("string", "standalone", standalone.toString())
+            }
+            app("comensal", "Menú", "/r/brasa-demo", true)
+            app("cocina", "Cocina", "/cocina", true)
+            app("panel", "Panel", "/panel", true)
+            app("operador", "Operador", "/operador", true)
+            app("sitio", "Sitio de venta", "/", true)
+            app("demo", "Demo restaurantes", "/demo", false)
+        }
     }
 }
 

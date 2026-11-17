@@ -17,8 +17,21 @@ actual fun initialRouteFromPlatform(): String = "/"
 actual fun pushRouteToPlatform(route: String) {
 }
 
-// 10.0.2.2 is the host machine as seen from the Android emulator.
-actual fun defaultApiBaseUrl(): String = "http://10.0.2.2:8080"
+private const val PREFS = "app_settings"
+private const val KEY_API_BASE = "api_base_url"
+
+actual fun savedApiBaseUrl(): String? =
+    AndroidPlatform.appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        ?.getString(KEY_API_BASE, null)?.takeIf { it.isNotBlank() }
+
+actual fun saveApiBaseUrl(url: String?) {
+    val prefs = AndroidPlatform.appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE) ?: return
+    prefs.edit().apply { if (url.isNullOrBlank()) remove(KEY_API_BASE) else putString(KEY_API_BASE, url) }.apply()
+}
+
+// La dirección guardada en Ajustes del servidor manda; si no hay, 10.0.2.2 es la computadora anfitriona
+// vista desde el emulador de Android.
+actual fun defaultApiBaseUrl(): String = savedApiBaseUrl() ?: "http://10.0.2.2:8080"
 
 actual fun openExternalUrl(url: String) {
     val context = AndroidPlatform.appContext ?: return

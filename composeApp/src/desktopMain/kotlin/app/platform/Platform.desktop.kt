@@ -20,3 +20,11 @@ actual fun openExternalUrl(url: String) {
         }
     }
 }
+
+private var apiBaseOverride: String? = null
+
+actual fun savedApiBaseUrl(): String? = apiBaseOverride
+
+actual fun saveApiBaseUrl(url: String?) {
+    apiBaseOverride = url
+}

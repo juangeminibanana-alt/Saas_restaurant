@@ -18,3 +18,11 @@ actual fun defaultApiBaseUrl(): String = window.location.origin
 actual fun openExternalUrl(url: String) {
     window.open(url, "_blank")
 }
+
+private var apiBaseOverride: String? = null
+
+actual fun savedApiBaseUrl(): String? = apiBaseOverride
+
+actual fun saveApiBaseUrl(url: String?) {
+    apiBaseOverride = url
+}

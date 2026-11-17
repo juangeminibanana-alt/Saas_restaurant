@@ -57,14 +57,18 @@ object Routes {
 }
 
 /** Navegador con pila de regreso; refleja cada cambio en la plataforma (hash en web). */
-class AppNavigator(initialRoute: String) : Navigator {
+class AppNavigator(initialRoute: String, standalone: Boolean = false) : Navigator {
+    /** En una app independiente no existe el índice de la demo: "salir" regresa al inicio de esa app. */
+    private val homeRoute: String? = if (standalone) Routes.normalize(initialRoute) else null
+
     private val backStack = ArrayList<String>()
 
     override var route: String by mutableStateOf(Routes.normalize(initialRoute))
         private set
 
     override fun navigate(route: String) {
-        val target = Routes.normalize(route)
+        val normalized = Routes.normalize(route)
+        val target = if (homeRoute != null && normalized == Routes.DEMO) homeRoute else normalized
         if (target == this.route) return
         backStack.add(this.route)
         if (backStack.size > 50) backStack.removeAt(0)
