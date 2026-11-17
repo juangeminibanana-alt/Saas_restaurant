@@ -15,11 +15,17 @@ if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
 }
 
 # Datos y caches en D: si existe ese disco; si no, dentro de la carpeta del proyecto.
+$JavaOpts = @()
 if (Test-Path "D:\") {
     $Caches = "D:\saas-restaurantes-cache"
-    New-Item -ItemType Directory -Force -Path "$Caches\gradle", "$Caches\pgdata" | Out-Null
+    New-Item -ItemType Directory -Force -Path "$Caches\gradle", "$Caches\pgdata", "$Caches\tmp", "$Caches\pg-bin" | Out-Null
     $env:GRADLE_USER_HOME = "$Caches\gradle"
     $env:EMBEDDED_DB_DIR = "$Caches\pgdata"
+    # Los archivos temporales y los binarios de la base de datos tambien van a D: (C: puede estar lleno).
+    $JavaOpts = @("-Djava.io.tmpdir=$Caches\tmp", "-Dot.epg.working-dir=$Caches\pg-bin")
+    # Borra los restos de un intento anterior que se quedo a medias en C:.
+    $restos = Join-Path $env:TEMP "embedded-pg"
+    if (Test-Path $restos) { Remove-Item -Recurse -Force $restos -ErrorAction SilentlyContinue }
 }
 $env:EMBEDDED_DB = "true"
 
@@ -49,7 +55,7 @@ Write-Host ""
 
 if (Test-Path "dist\servidor\lib") {
     # Servidor ya compilado: no descarga nada.
-    java -cp "dist\servidor\lib\*" server.MainKt
+    java @JavaOpts -cp "dist\servidor\lib\*" server.MainKt
 } else {
     # Sin el servidor compilado: se compila con Gradle (descarga dependencias la primera vez).
     .\gradlew.bat :backend:run
