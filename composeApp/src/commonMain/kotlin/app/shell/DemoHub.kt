@@ -34,6 +34,7 @@ import app.ui.components.AppIcons
 import app.ui.components.AppText
 import app.ui.components.BrandMark
 import app.ui.components.DishImage
+import app.ui.components.GlyphIcon
 import app.ui.components.SectionHeader
 import app.ui.components.StatusPill
 import app.ui.components.Tone
@@ -55,7 +56,11 @@ fun DemoHub(onOpen: (String) -> Unit) {
     val compact = size == WindowSize.COMPACT
     val columns = when (size) { WindowSize.COMPACT -> 1; WindowSize.MEDIUM -> 2; WindowSize.EXPANDED -> 3 }
     val tenants by produceState(emptyList<TenantPublic>()) {
-        value = try { repo.listPublicTenants() } catch (e: Throwable) { emptyList() }
+        value = try {
+            val all = repo.listPublicTenants()
+            // Vitrina: los restaurantes de demostración con portada (el resto se ve desde la consola del operador).
+            all.filter { it.theme.coverUrl != null }.ifEmpty { all.take(3) }
+        } catch (e: Throwable) { emptyList() }
     }
     val entries = listOf(
         HubEntry("Pantalla de cocina", "Pedidos de todos los canales en tiempo real, con tiempos y un toque para marcar listo.", Routes.KITCHEN, AppIcons.Chef, "cocina@brasa.demo"),
@@ -186,7 +191,7 @@ fun DemoSwitcher(navigator: AppNavigator) {
                 .pressable(scale = 0.9f) { navigator.navigate(Routes.DEMO) },
             contentAlignment = Alignment.Center,
         ) {
-            AppText("⌂", style = AppTheme.type.title, color = colors.inkMuted)
+            GlyphIcon(AppIcons.Home, colors.inkMuted, size = 18.dp)
         }
     }
 }

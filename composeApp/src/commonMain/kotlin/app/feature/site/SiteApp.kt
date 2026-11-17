@@ -106,7 +106,8 @@ internal class SiteData {
             plansError = (e as? RepositoryException)?.message ?: "No pudimos cargar los planes. Intenta de nuevo."
         }
         try {
-            val list = repo.listPublicTenants().take(3)
+            val all = repo.listPublicTenants()
+            val list = all.filter { it.theme.coverUrl != null }.ifEmpty { all }.take(3)
             tenants = list
             for (tenant in list) {
                 try {

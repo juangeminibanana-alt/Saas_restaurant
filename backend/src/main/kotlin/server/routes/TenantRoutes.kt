@@ -37,12 +37,6 @@ private const val SOLD = "('PAID', 'PREPARING', 'READY', 'COMPLETED')"
 fun Route.tenantRoutes() {
     // ── Administración del restaurante: dueño y gerente.
     authenticated(Role.OWNER, Role.MANAGER) {
-        get(ApiRoutes.TENANT_BRAND) {
-            val id = call.tenantId
-            val tenant = Db.tenantTx(id) { c -> c.tenantById(id) } ?: notFound("No encontramos tu restaurante.")
-            call.respond(tenant.public)
-        }
-
         put(ApiRoutes.TENANT_BRAND) {
             val id = call.tenantId
             val req = call.receive<UpdateBrandRequest>()
@@ -159,6 +153,13 @@ fun Route.tenantRoutes() {
 
     // ── Operación de pedidos: también caja y cocina.
     authenticated(Role.OWNER, Role.MANAGER, Role.CASHIER, Role.KITCHEN) {
+        // Leer la marca es de solo lectura: caja y cocina la necesitan para pintar su pantalla.
+        get(ApiRoutes.TENANT_BRAND) {
+            val id = call.tenantId
+            val tenant = Db.tenantTx(id) { c -> c.tenantById(id) } ?: notFound("No encontramos tu restaurante.")
+            call.respond(tenant.public)
+        }
+
         get(ApiRoutes.TENANT_ORDERS) {
             val id = call.tenantId
             val active = call.request.queryParameters["active"]?.lowercase() == "true"
