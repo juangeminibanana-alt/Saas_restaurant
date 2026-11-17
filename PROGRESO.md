@@ -1,6 +1,6 @@
 # Progreso — sesión del 17 de noviembre de 2026
 
-Corte de la sesión: 00:58 am CDMX (hora límite 01:45). Rama: `ccr-4c70e3a3-vbrm7i`.
+Corte de la sesión: 01:30 am CDMX (hora límite 01:45). Rama: `ccr-4c70e3a3-vbrm7i`.
 
 ## Resumen
 
@@ -54,13 +54,54 @@ pero nadie lo ha usado todavía.
 - **Mercado Pago real en sandbox**: no hay credenciales de prueba cargadas, así que todo corre en modo demostración
   (`paymentsDemo: true`). Falta `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`
   (ver `docs/PAGOS_E_INTEGRACIONES.md`).
-- **Android**: nunca se compiló (aquí no hay SDK). El target se activa solo al detectar el SDK.
+- **Android en dispositivo**: los APK compilan pero no se han ejecutado en teléfono ni emulador (ver sección Android).
 - **iOS**: código y proyecto Xcode escritos (`iosApp/`), nunca compilados ni abiertos en Xcode.
 - **Instalador de Windows** (`.msi`/`.exe`): configurado en Gradle, no se generó.
 - **Web de producción**: solo build de desarrollo (≈19 MB de Wasm, primera carga lenta). El build optimizado
   necesita Binaryen, que este entorno no pudo descargar.
 - **Pruebas automatizadas, revisión de código y de seguridad**: ninguna, por instrucción (esperan tu aprobación).
 - **Pull request**: el repositorio estaba vacío y no hay rama base contra la cual abrirlo.
+
+## Android: seis APK (agregado al final de la sesión)
+
+Están en `dist/apk/` (debug, ~18 MB cada uno). Se regeneran con el SDK de Android instalado y
+`./gradlew :composeApp:assembleDebug` (un sabor de Gradle por app).
+
+| APK | Nombre en el teléfono | Abre en | Id de la app |
+| --- | --- | --- | --- |
+| `comensal.apk` | Menú | Menú de Brasa Demo | `com.whitelabel.restaurantes.comensal` |
+| `cocina.apk` | Cocina | Pantalla de cocina | `com.whitelabel.restaurantes.cocina` |
+| `panel.apk` | Panel | Panel del restaurante | `com.whitelabel.restaurantes.panel` |
+| `operador.apk` | Operador | Consola del operador | `com.whitelabel.restaurantes.operador` |
+| `sitio.apk` | Sitio de venta | Sitio con planes y registro | `com.whitelabel.restaurantes.sitio` |
+| `demo-todo-en-uno.apk` | Demo restaurantes | Índice con las cinco apps | `com.whitelabel.restaurantes` |
+
+**Estado real:**
+
+- Los seis **compilan** y están bien armados (firma de depuración, fotos y fuentes dentro).
+  **Ninguno se ha abierto en un teléfono ni en un emulador.**
+- **Las cinco apps separadas no comparten datos por sí solas.** Sin servidor, cada una usa datos de demostración
+  en su propia memoria: el pedido del comensal no aparece en la app de cocina.
+- Para conectarlas: botón de engrane dentro de cada app → dirección del servidor (por ejemplo
+  `http://192.168.1.50:8080`, misma red Wi‑Fi). En un emulador en la misma computadora que el servidor funciona
+  sin configurar nada (`10.0.2.2:8080`). **El botón de engrane y la conexión desde Android no se han probado.**
+- `demo-todo-en-uno.apk` permite probar el flujo completo sin servidor porque todo vive en una sola app.
+- El botón "atrás" del sistema regresa a la pantalla anterior, cierra hojas y vuelve del carrito al menú
+  (compila; sin probar en dispositivo).
+
+**Flujo en modo demostración, verificado en navegador a tamaño de teléfono (390×844, sin backend):**
+índice → menú de Brasa → 2 platillos → pagar → pago de prueba → rastreo → cocina recibe el pedido en "Nuevos" →
+"Aceptar" lo pasa a "En preparación" → "Mis pedidos" del comensal muestra "En preparación". Se corrigió un fallo:
+el historial del comensal se perdía al salir y volver a entrar al menú.
+
+**Detalles visuales vistos a tamaño de teléfono (sin corregir, no bloquean):**
+
+- Entrando al menú sin `?mesa=`, "Pagar" pide escribir la mesa antes de continuar.
+- El botón flotante redondo tapa texto en carrito, rastreo y en la hoja de pago.
+- Panel: etiquetas de los indicadores cortadas ("Ventas de…") y el botón "Guardar cambios" cortado.
+- Consola del operador: el sexto elemento de la barra inferior queda cortado.
+- Cocina: un pedido nuevo cae al final de "Nuevos" y hay que desplazarse para verlo.
+- Sin ícono de app; la barra de estado puede quedar con íconos oscuros sobre fondo oscuro al cambiar de tema.
 
 ## Pendientes conocidos (detalles)
 
@@ -73,7 +114,7 @@ pero nadie lo ha usado todavía.
   y por eso se ocultan del índice de la demo y del sitio.
 - Las rutas web usan hash (`/#/r/brasa-demo`); para dominios propios convendrá pasar a rutas de path.
 - El botón flotante redondo (casita) es solo una ayuda de revisión para volver al índice de la demo.
-- Sin ícono de app en iOS ni Android; en Android el contenido puede quedar bajo las barras del sistema.
+- Sin ícono de app en iOS ni Android.
 - Las cinco apps viven en un solo binario con rutas; separarlas en apps independientes es un cambio de empaquetado.
 - Esta sesión corrió en la nube (Linux), no en `D:`. `scripts/windows-setup.ps1` deja proyecto y cachés en `D:`.
 

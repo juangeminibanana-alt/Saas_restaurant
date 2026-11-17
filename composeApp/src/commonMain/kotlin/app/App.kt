@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.data.createRepository
+import app.platform.PlatformBackHandler
 import app.shared.data.AppRepository
 import app.shell.AppNavigator
 import app.shell.DemoSwitcher
@@ -60,6 +61,9 @@ fun App(initialRoute: String = "/", standalone: Boolean = false) {
                     LoadingState(Modifier.fillMaxSize())
                 } else {
                     CompositionLocalProvider(LocalRepo provides current) {
+                        // "Atrás" del sistema: regresa a la ruta anterior; en la raíz deja que el sistema cierre la app.
+                        val currentRoute = navigator.route
+                        PlatformBackHandler(enabled = currentRoute.isNotEmpty() && navigator.canGoBack) { navigator.back() }
                         // La clave reinicia las pantallas cuando cambia la fuente de datos.
                         key(repoVersion) { Router(navigator) }
                         if (standalone) {

@@ -1,5 +1,7 @@
 package app.platform
 
+import androidx.compose.runtime.Composable
+
 /** Short platform id: "web", "desktop", "android" or "ios". */
 expect fun platformName(): String
 
@@ -20,3 +22,7 @@ expect fun savedApiBaseUrl(): String?
 
 /** Guarda (o borra con null) la dirección del servidor para este dispositivo. */
 expect fun saveApiBaseUrl(url: String?)
+
+/** Botón/gesto "atrás" del sistema (Android). En las demás plataformas no hace nada. */
+@Composable
+expect fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit)

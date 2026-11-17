@@ -41,3 +41,8 @@ actual fun openExternalUrl(url: String) {
         )
     }
 }
+
+@androidx.compose.runtime.Composable
+actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
+    androidx.activity.compose.BackHandler(enabled = enabled, onBack = onBack)
+}

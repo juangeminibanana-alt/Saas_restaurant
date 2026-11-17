@@ -184,6 +184,7 @@ fun AppBottomSheet(
     if (!transition.currentState && !transition.targetState) return
 
     val dismiss by rememberUpdatedState(onDismiss)
+    app.platform.PlatformBackHandler(enabled = visible) { dismiss() }
     val colors = AppTheme.colors
     val centered = LocalWindowSize.current == WindowSize.EXPANDED
 

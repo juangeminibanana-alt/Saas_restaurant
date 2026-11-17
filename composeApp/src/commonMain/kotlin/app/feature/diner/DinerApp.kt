@@ -198,6 +198,10 @@ private fun DinerContent(state: DinerState, tenant: TenantPublic, onExit: () -> 
         }
     }
 
+    // "Atrás" del sistema dentro del menú: de carrito, rastreo o historial se vuelve al menú (sin perder el carrito).
+    app.platform.PlatformBackHandler(enabled = state.screen != DinerScreen.MENU && state.payPhase == PayPhase.IDLE) {
+        state.screen = DinerScreen.MENU
+    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val viewportHeight = maxHeight
         AnimatedContent(
