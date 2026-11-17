@@ -2,6 +2,9 @@ package app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -35,7 +38,8 @@ fun App(initialRoute: String = "/") {
     val repo by produceState<AppRepository?>(initialValue = null) { value = createRepository() }
 
     AppTheme {
-        BoxWithConstraints(Modifier.fillMaxSize().background(AppTheme.colors.canvas)) {
+        // El fondo llega hasta los bordes; el contenido respeta barra de estado, muesca y barra de navegación.
+        BoxWithConstraints(Modifier.fillMaxSize().background(AppTheme.colors.canvas).windowInsetsPadding(WindowInsets.safeDrawing)) {
             val windowSize = when {
                 maxWidth < 600.dp -> WindowSize.COMPACT
                 maxWidth < 1024.dp -> WindowSize.MEDIUM

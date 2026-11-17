@@ -12,7 +12,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AndroidPlatform.appContext = applicationContext
         setContent {
-            App()
+            // En el teléfono se abre el índice de la demo para poder entrar a las cinco apps.
+            App(initialRoute = "/demo")
         }
     }
 }
