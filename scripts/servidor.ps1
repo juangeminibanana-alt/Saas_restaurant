@@ -1,7 +1,9 @@
-# Convierte esta computadora en el servidor de las apps (Windows). NO necesita Docker:
-# el servidor trae su propia base de datos (PostgreSQL embebido). Solo requiere Java 17 o superior.
+# Convierte esta computadora en el servidor de las apps (Windows).
+# No necesita Docker ni compilar nada: usa el servidor ya compilado de dist\servidor y su propia
+# base de datos (PostgreSQL embebido). Solo requiere Java 17 o superior.
 # Uso, desde la carpeta del proyecto:  powershell -ExecutionPolicy Bypass -File scripts\servidor.ps1
 # Deja esta ventana abierta mientras pruebas. Ctrl+C para detener.
+# (Mensajes sin acentos a proposito: PowerShell 5.1 los muestra mal.)
 
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
@@ -12,7 +14,7 @@ if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-# Todo en D: (cachés y datos) si existe ese disco; si no, dentro de la carpeta del proyecto.
+# Datos y caches en D: si existe ese disco; si no, dentro de la carpeta del proyecto.
 if (Test-Path "D:\") {
     $Caches = "D:\saas-restaurantes-cache"
     New-Item -ItemType Directory -Force -Path "$Caches\gradle", "$Caches\pgdata" | Out-Null
@@ -28,7 +30,7 @@ try {
     }
     Write-Host "     Listo."
 } catch {
-    Write-Host "     No pude abrirlo desde aquí. Si el teléfono no conecta, abre PowerShell COMO ADMINISTRADOR y ejecuta una vez:" -ForegroundColor Yellow
+    Write-Host "     No pude abrirlo desde aqui. Si el telefono no conecta, abre PowerShell COMO ADMINISTRADOR y ejecuta una vez:" -ForegroundColor Yellow
     Write-Host "     New-NetFirewallRule -DisplayName 'Restaurantes 8080' -Direction Inbound -LocalPort 8080 -Protocol TCP -Action Allow" -ForegroundColor Yellow
 }
 
@@ -37,10 +39,18 @@ $ips = Get-NetIPAddress -AddressFamily IPv4 |
     Select-Object -ExpandProperty IPAddress
 
 Write-Host ""
-Write-Host "En cada app del teléfono toca el botón de engrane y escribe esta dirección (teléfono en el mismo Wi-Fi):" -ForegroundColor Green
+Write-Host "En cada app del telefono toca el boton de engrane y escribe esta direccion (telefono en el mismo Wi-Fi):" -ForegroundColor Green
 foreach ($ip in $ips) { Write-Host "     http://$($ip):8080" -ForegroundColor Green }
 Write-Host ""
-Write-Host "2/2  Arrancando el servidor. La primera vez tarda varios minutos (descarga dependencias)." -ForegroundColor Cyan
-Write-Host "     Está listo cuando veas 'Responding at http://0.0.0.0:8080'. Deja esta ventana abierta; Ctrl+C para detener."
+Write-Host "2/2  Arrancando el servidor..." -ForegroundColor Cyan
+Write-Host "     Esta listo cuando veas 'Responding at http://0.0.0.0:8080'. Deja esta ventana abierta; Ctrl+C para detener."
 Write-Host "     Si Windows pregunta si permites el acceso a la red para Java o PostgreSQL, acepta."
-.\gradlew.bat :backend:run
+Write-Host ""
+
+if (Test-Path "dist\servidor\lib") {
+    # Servidor ya compilado: no descarga nada.
+    java -cp "dist\servidor\lib\*" server.MainKt
+} else {
+    # Sin el servidor compilado: se compila con Gradle (descarga dependencias la primera vez).
+    .\gradlew.bat :backend:run
+}
