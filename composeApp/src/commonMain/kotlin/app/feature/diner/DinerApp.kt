@@ -1,0 +1,16 @@
+package app.feature.diner
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+
+/** Temporary stub: the owner of this feature replaces the whole file. */
+@Composable
+fun DinerApp(slug: String, onExit: () -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("Diner · $slug")
+    }
+}
