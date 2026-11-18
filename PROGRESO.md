@@ -1,3 +1,20 @@
+# Actualización — 18 de noviembre de 2026: sistema de diseño Noche aplicado
+
+- **Diseño elegido: Noche** (oscuro de precisión). Maquetas en `docs/diseno/noche/` y el sistema documentado
+  en `docs/diseno/noche/SISTEMA.md` (reglas, tokens, escala tipográfica, componentes) y `docs/DESIGN_SYSTEM_API.md`.
+- **Aplicado a las cinco apps**: tema siempre oscuro, Geist y Geist Mono, radios 4/8/12/16, sin sombras
+  (líneas de 1 px), acento del restaurante solo para "tu pedido". La marca de cada restaurante es solo su
+  color y sus fotos; el panel ya no ofrece fuente, esquinas ni modo claro/oscuro.
+- **Comensal** igual a la maqueta: portada con identidad, riel de categorías, "Esta semana", filas de 80 px,
+  barra inferior; detalle del platillo; carrito, pago de prueba y seguimiento.
+- **Cocina, panel, operador y sitio** en el mismo lenguaje. En teléfono, panel y operador usan "Más" para
+  las secciones que no caben en la barra inferior.
+- Verificado en la web (Wasm, datos de demostración) con capturas a 390×844, 1024 y 1440 px:
+  `docs/diseno/noche/app/comensal.jpg` y `docs/diseno/noche/app/otras-apps.jpg`. Escritorio compila.
+- **APK recompilados** con el diseño nuevo en `dist/apk/` (el zip de los seis queda solo local por tamaño).
+  Arranque de Android y web en negro, barras del sistema con iconos claros.
+- No verificado: los APK en un teléfono real con este diseño; el diálogo de servidor (solo existe en los APK).
+
 # Progreso — sesión del 17 de noviembre de 2026
 
 Corte de la sesión: 01:30 am CDMX (hora límite 01:45). Rama: `ccr-4c70e3a3-vbrm7i`.
