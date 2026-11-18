@@ -80,7 +80,8 @@ internal fun SubscriptionsSection(store: OperatorStore, onReload: () -> Unit) {
                         Spacer(Modifier.width(Space.x5))
                     }
                     Spacer(Modifier.width(Space.x2))
-                    Column(horizontalAlignment = Alignment.End) {
+                    // Columna de ancho fijo en pantallas anchas: la etiqueta del medio queda alineada en todas las filas.
+                    Column(if (compact) Modifier else Modifier.width(176.dp), horizontalAlignment = Alignment.End) {
                         AppText(formatMoney(planPrice[t.planId] ?: t.mrrCents), style = AppTheme.type.mono, maxLines = 1)
                         Spacer(Modifier.height(Space.x1))
                         StatusPill(t.status.billingLabel(), tone = t.status.tone())

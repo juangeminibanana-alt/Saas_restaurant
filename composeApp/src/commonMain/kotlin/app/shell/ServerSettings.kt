@@ -84,7 +84,8 @@ fun ServerSettingsButton(isRemote: Boolean, onChanged: () -> Unit) {
                 Spacer(Modifier.height(Space.x1))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.CenterVertically) {
                     AppButton("Cancelar", onClick = { open = false }, variant = ButtonVariant.GHOST)
-                    AppButton("Guardar y conectar", onClick = save, modifier = Modifier.weight(1f))
+                    // Sin dirección no hay nada que conectar: el botón dice lo que de verdad va a pasar.
+                    AppButton(if (url.isBlank()) "Usar datos de demostración" else "Guardar y conectar", onClick = save, modifier = Modifier.weight(1f))
                 }
             }
         }

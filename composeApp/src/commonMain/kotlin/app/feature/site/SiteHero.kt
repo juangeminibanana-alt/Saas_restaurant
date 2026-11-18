@@ -91,7 +91,8 @@ private fun HeroCopy(modifier: Modifier, onSignup: () -> Unit, onSampleMenu: () 
         Reveal { Eyebrow("Menú digital · marca blanca") }
         Spacer(Modifier.height(Space.x3))
         Reveal(delayMs = 40) {
-            AppText(brand.headline, modifier = Modifier.widthIn(max = 640.dp), style = heroStyle())
+            // A 56 en escritorio el titular cabe en dos renglones sin dejar una palabra sola.
+            AppText(brand.headline, modifier = Modifier.widthIn(max = if (LocalWindowSize.current == WindowSize.EXPANDED) 780.dp else 640.dp), style = heroStyle())
         }
         Spacer(Modifier.height(Space.x5))
         Reveal(delayMs = 80) {

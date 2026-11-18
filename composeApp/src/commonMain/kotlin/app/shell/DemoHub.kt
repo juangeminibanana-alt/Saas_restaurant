@@ -103,19 +103,21 @@ fun DemoHub(onOpen: (String) -> Unit) {
             )
 
             Spacer(Modifier.height(Space.x10))
-            SectionHeader("Menú del comensal", modifier = Modifier.padding(vertical = Space.x3), label = "Mismo código · tres marcas")
+            SectionHeader("Menú del comensal", modifier = Modifier.padding(vertical = Space.x3), label = if (compact) "Tres marcas" else "Mismo código · tres marcas")
             val list = tenants
             if (list == null) {
-                HubGrid(listOf(0, 1, 2), columns) { Skeleton(Modifier.fillMaxWidth().aspectRatio(1.2f), shape = AppTheme.shapes.lg) }
+                HubGrid(listOf(0, 1, 2), columns) { Skeleton(Modifier.fillMaxWidth().aspectRatio(if (compact) 1.6f else 1.2f), shape = AppTheme.shapes.lg) }
             } else {
-                HubGrid(list, columns) { tenant -> TenantTile(tenant) { onOpen(Routes.diner(tenant.slug)) } }
+                HubGrid(list, columns) { tenant -> TenantTile(tenant, photoRatio = if (compact) 2f else 16f / 10f) { onOpen(Routes.diner(tenant.slug)) } }
             }
 
             Spacer(Modifier.height(Space.x8))
             SectionHeader(
                 "Operación y administración",
                 modifier = Modifier.padding(vertical = Space.x3),
-                label = "Contraseña ${DemoData.DEMO_PASSWORD}",
+                // En teléfono la etiqueta no cabe junto al título: la contraseña baja como subtítulo.
+                subtitle = if (compact) "Contraseña de todas las cuentas: ${DemoData.DEMO_PASSWORD}" else null,
+                label = if (compact) null else "Contraseña ${DemoData.DEMO_PASSWORD}",
             )
             Column(Modifier.fillMaxWidth().flatSurface(colors.surface, colors.line, AppTheme.shapes.lg)) {
                 entries.forEachIndexed { index, entry ->
@@ -129,7 +131,7 @@ fun DemoHub(onOpen: (String) -> Unit) {
 
 /** Mosaico de un restaurante: su fotografía arriba y, en el pie, nombre, cocina y su acento como muestra sólida. */
 @Composable
-private fun TenantTile(tenant: TenantPublic, onClick: () -> Unit) {
+private fun TenantTile(tenant: TenantPublic, photoRatio: Float, onClick: () -> Unit) {
     AppTheme(brand = tenant.theme) {
         val colors = AppTheme.colors
         Column(
@@ -140,7 +142,7 @@ private fun TenantTile(tenant: TenantPublic, onClick: () -> Unit) {
         ) {
             DishImage(
                 tenant.theme.coverUrl,
-                Modifier.fillMaxWidth().aspectRatio(16f / 10f),
+                Modifier.fillMaxWidth().aspectRatio(photoRatio),
                 contentDescription = tenant.name,
                 shape = RectangleShape,
                 ring = false,
@@ -224,7 +226,7 @@ private val EdgeTabIcon = 12.dp
  * Control auxiliar pegado al borde de la pantalla, a media altura: una pestaña plana (superficie + filete) tan
  * ancha como el margen de página, de modo que nunca cubre una acción principal. En teléfono va al borde
  * izquierdo (a la derecha viven los "+" y las acciones); en pantallas anchas, al derecho (a la izquierda vive
- * la barra lateral). El área de toque es algo más ancha que la cara visible.
+ * la barra lateral). El área de toque es más alta que la cara visible, nunca más ancha que el margen.
  */
 @Composable
 internal fun ShellEdgeTab(icon: ImageVector, contentDescription: String, onClick: () -> Unit, dot: Color? = null) {
@@ -233,10 +235,12 @@ internal fun ShellEdgeTab(icon: ImageVector, contentDescription: String, onClick
     val radius = Space.x2
     val shape = if (compact) RoundedCornerShape(topEnd = radius, bottomEnd = radius) else RoundedCornerShape(topStart = radius, bottomStart = radius)
     Box(Modifier.fillMaxSize(), contentAlignment = if (compact) Alignment.CenterStart else Alignment.CenterEnd) {
+        // El área de toque no invade el contenido: tan ancha como el margen de página y más alta que la cara
+        // visible (el borde de la pantalla hace el resto: un toque pegado al borde siempre cae aquí).
         Box(
             Modifier
-                .width(EdgeTabWidth + Space.x3)
-                .height(EdgeTabHeight)
+                .width(EdgeTabWidth)
+                .height(EdgeTabHeight + Space.x4)
                 .pressable(scale = 1f, onClick = onClick)
                 .semantics { this.contentDescription = contentDescription },
             contentAlignment = if (compact) Alignment.CenterStart else Alignment.CenterEnd,

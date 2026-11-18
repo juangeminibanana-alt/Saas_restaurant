@@ -1,6 +1,7 @@
 package app.feature.operator
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -122,7 +123,8 @@ private fun PlanCard(plan: Plan, tenantCount: Int, onEdit: () -> Unit) {
     // El plan destacado se marca con tinta ("Destacado") y un filete más fuerte, nunca con brasa.
     OpPanel(Modifier.fillMaxSize(), borderColor = if (plan.highlighted) colors.lineStrong else colors.line) {
         Column(Modifier.fillMaxSize().padding(Space.x5), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.CenterVertically) {
+            // Alto fijo: con o sin la ficha "Destacado", los precios de las tres tarjetas quedan en la misma línea.
+            Row(Modifier.height(Space.x6), horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.CenterVertically) {
                 LabelText(plan.name.ifBlank { "Sin nombre" }, Modifier.weight(1f), color = colors.ink)
                 if (plan.highlighted) TagBadge("Destacado", tone = Tone.PRIMARY)
             }
@@ -135,7 +137,10 @@ private fun PlanCard(plan: Plan, tenantCount: Int, onEdit: () -> Unit) {
                 AppText("/ mes", Modifier.alignByBaseline(), style = type.bodySm, color = colors.inkMuted)
             }
             if (plan.description.isNotBlank()) {
-                AppText(plan.description, style = AppTheme.type.bodySm, color = colors.inkMuted)
+                // Dos renglones reservados: las cifras de abajo quedan a la misma altura en las tres tarjetas.
+                Box(Modifier.heightIn(min = Space.x10)) {
+                    AppText(plan.description, style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 3)
+                }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x4)) {
                 OpKeyValue("Comisión", formatBps(plan.feeBps), Modifier.weight(1f), mono = true)

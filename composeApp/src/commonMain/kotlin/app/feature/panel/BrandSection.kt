@@ -195,8 +195,8 @@ private fun BrandEditor(source: TenantPublic, menu: Menu?, onSaved: (TenantPubli
                 verticalArrangement = Arrangement.spacedBy(Space.x4),
             ) {
                 PageHeader("Marca", subtitle = BrandSubtitle) {
+                    // "Ver mi menú" ya está en la barra superior: aquí sólo queda la acción de esta página.
                     if (draft.isDirty) StatusPill("Sin guardar", tone = Tone.WARNING)
-                    AppButton("Ver mi menú", onClick = { onOpenDiner(source.slug) }, variant = ButtonVariant.SECONDARY)
                     AppButton("Guardar cambios", onClick = save, loading = saving, enabled = draft.isDirty || saving)
                 }
                 BrandForm(draft)
@@ -240,7 +240,7 @@ private fun BrandForm(draft: BrandDraft) {
 
     AppCard(Modifier.fillMaxWidth(), padding = Space.x4) {
         Column(verticalArrangement = Arrangement.spacedBy(Space.x4)) {
-            SectionHeader("Datos del restaurante", label = "Lo que ven tus clientes")
+            SectionHeader("Datos del restaurante", label = if (compact) null else "Lo que ven tus clientes")
             if (compact) {
                 AppTextField(draft.name, { draft.name = it }, Modifier.fillMaxWidth(), label = "Nombre", placeholder = "Nombre de tu restaurante", error = draft.nameError)
                 AppTextField(draft.tagline, { draft.tagline = it }, Modifier.fillMaxWidth(), label = "Frase corta", placeholder = "Parrilla mexicana contemporánea")
@@ -267,7 +267,7 @@ private fun BrandForm(draft: BrandDraft) {
 
     AppCard(Modifier.fillMaxWidth(), padding = Space.x4) {
         Column(verticalArrangement = Arrangement.spacedBy(Space.x4)) {
-            SectionHeader("Color de marca", label = "Tu única decisión de diseño")
+            SectionHeader("Color de marca", label = if (compact) null else "Tu única decisión de diseño")
             AppText(
                 "Es el color de \"tu pedido\": el botón principal y las cantidades agregadas. Tipografía, formas y fondo oscuro son del sistema y se ven igual de bien con cualquier acento.",
                 style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted,
@@ -296,12 +296,14 @@ private fun BrandForm(draft: BrandDraft) {
             if (draft.primary != null) {
                 AppButton("Usar el color del sistema", onClick = { draft.pick(null) }, variant = ButtonVariant.SECONDARY, size = ButtonSize.SM)
             }
+            // Sin la vista previa al lado (teléfono y tableta), el acento se prueba aquí mismo, en la barra del menú.
+            if (LocalWindowSize.current != WindowSize.EXPANDED) AccentSample(draft.theme)
         }
     }
 
     AppCard(Modifier.fillMaxWidth(), padding = Space.x4) {
         Column(verticalArrangement = Arrangement.spacedBy(Space.x4)) {
-            SectionHeader("Logotipo y portada", label = "Tu fotografía")
+            SectionHeader("Logotipo y portada", label = if (compact) null else "Tu fotografía")
             AppText(
                 "La portada abre tu menú y es lo único que brilla en pantalla. Pega el enlace de cada imagen.",
                 style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted,
@@ -347,4 +349,36 @@ private fun onColor(color: Color): Color {
     val c = AppTheme.colors
     val luminance = 0.2126f * color.red + 0.7152f * color.green + 0.0722f * color.blue
     return if (luminance > 0.5f) c.canvas else c.ink
+}
+
+/**
+ * Muestra del acento en su único lugar: la barra inferior del menú (conteo, total y "Ver pedido"), pintada con el
+ * acento del borrador tal como lo ajusta el sistema. No es interactiva.
+ */
+@Composable
+private fun AccentSample(theme: BrandTheme) {
+    AppTheme(brand = theme) {
+        val c = AppTheme.colors
+        Column(verticalArrangement = Arrangement.spacedBy(Space.x2)) {
+            LabelText("Así se ve en tu menú")
+            Row(
+                Modifier.fillMaxWidth().flatSurface(c.canvas, c.line, AppTheme.shapes.md).padding(Space.x3),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Space.x3),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    LabelText("2 platillos")
+                    AppText("$274", style = AppTheme.type.monoLg, maxLines = 1)
+                }
+                Row(
+                    Modifier.height(Sizes.controlLg).background(c.primary, AppTheme.shapes.md).padding(horizontal = Space.x4),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Space.x2),
+                ) {
+                    AppText("Ver pedido", style = AppTheme.type.h3, color = c.onPrimary, maxLines = 1)
+                    PanelIcon(AppIcons.Forward, tint = c.onPrimary, size = Sizes.icon)
+                }
+            }
+        }
+    }
 }

@@ -83,6 +83,17 @@ import app.ui.theme.Motion
 import app.ui.theme.Sizes
 import app.ui.theme.Space
 import app.ui.theme.WindowSize
+import androidx.compose.foundation.focusable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.key as keyCode
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /** Foto del platillo: toda la altura que el resto deja libre (texto + dos grupos + barra + aire = 532). */
@@ -115,8 +126,33 @@ fun DishSheet(state: DinerState, viewportHeight: Dp) {
         label = "dish-offset",
     ) { if (it) 0f else 1f }
     val item = state.sheetItem
+    // Escape cierra el platillo en web y escritorio (en Android lo hace "atrás").
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(state.sheetVisible) {
+        if (state.sheetVisible) {
+            try {
+                focus.requestFocus()
+            } catch (e: IllegalStateException) {
+                // Aún sin nodo de foco en este cuadro: el botón de cerrar sigue disponible.
+            }
+        }
+    }
 
-    Box(Modifier.fillMaxSize().zIndex(24f)) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .zIndex(24f)
+            .focusRequester(focus)
+            .focusable()
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.keyCode == Key.Escape && state.sheetVisible) {
+                    state.closeSheet()
+                    true
+                } else {
+                    false
+                }
+            },
+    ) {
         Box(
             Modifier
                 .matchParentSize()
@@ -217,6 +253,12 @@ private fun DishDetail(item: MenuItem, state: DinerState, heroHeight: Dp, fill: 
     }
     var quantity by remember { mutableStateOf(1) }
     var notes by remember { mutableStateOf("") }
+    val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    // Dónde empieza cada grupo dentro del contenido desplazable: "Agregar" lleva al primero que falte.
+    val groupTops = remember { mutableStateMapOf<String, Int>() }
+    // El grupo queda bajo la franja del botón de cerrar (72), no debajo de él.
+    val revealGap = with(LocalDensity.current) { (Sizes.bar - Space.x6).roundToPx() }
 
     val chosen: List<ModifierOption> = item.modifierGroups.flatMap { g ->
         val ids = selected[g.id] ?: emptyList()
@@ -236,7 +278,7 @@ private fun DishDetail(item: MenuItem, state: DinerState, heroHeight: Dp, fill: 
     Column(modifier) {
         BoxWithConstraints(Modifier.weight(1f, fill = fill).fillMaxWidth()) {
             val nameStyle = if (maxWidth < NarrowScreen) AppTheme.type.h1.copy(fontSize = 28.sp, lineHeight = 32.sp) else AppTheme.type.h1
-            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+            Column(Modifier.fillMaxWidth().verticalScroll(scroll)) {
                 // La foto es el producto: entera, a sangre, con un filete al pie.
                 DishImage(
                     item.imageUrl,
@@ -281,7 +323,9 @@ private fun DishDetail(item: MenuItem, state: DinerState, heroHeight: Dp, fill: 
                                 else -> current
                             }
                         },
-                        modifier = Modifier.padding(start = Space.gutter, end = Space.gutter, top = Space.x6),
+                        modifier = Modifier
+                            .onPlaced { groupTops[group.id] = it.positionInParent().y.roundToInt() }
+                            .padding(start = Space.gutter, end = Space.gutter, top = Space.x6),
                     )
                 }
                 AppTextField(
@@ -310,6 +354,10 @@ private fun DishDetail(item: MenuItem, state: DinerState, heroHeight: Dp, fill: 
                 onClick = {
                     if (missing.isNotEmpty()) {
                         Toasts.show("Elige una opción en: " + missing.joinToString(", ") { it.name }, Tone.WARNING)
+                        // Lleva la vista al primer grupo pendiente (su etiqueta ya avisa con el punto de brasa).
+                        groupTops[missing.first().id]?.let { top ->
+                            scope.launch { scroll.animateScrollTo((top - revealGap).coerceAtLeast(0), tween(Motion.BASE, easing = Motion.standard)) }
+                        }
                     } else {
                         state.add(item, quantity, chosen.map { it.id }, notes.trim())
                         state.closeSheet()

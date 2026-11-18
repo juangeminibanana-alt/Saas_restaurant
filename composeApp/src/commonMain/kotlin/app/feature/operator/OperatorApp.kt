@@ -29,6 +29,7 @@ import app.shared.model.UserSession
 import app.shared.util.label
 import app.shell.LocalRepo
 import app.shell.LoginGate
+import app.shell.NavOverflowHost
 import app.ui.components.AdminScaffold
 import app.ui.components.AppIconButton
 import app.ui.components.AppIcons
@@ -80,18 +81,18 @@ private fun OperatorConsole(session: UserSession) {
         NavItem(OpSection.SUPPORT.id, OpSection.SUPPORT.label, AppIcons.Mail, badge = openTicketCount().takeIf { it > 0 }),
         NavItem(OpSection.CREDENTIALS.id, OpSection.CREDENTIALS.label, AppIcons.Lock),
     )
-    // En teléfono la barra inferior lleva cinco destinos, a partes iguales y sin recortes; las credenciales
-    // maestras, que se consultan poco, pasan a un botón de la barra superior.
-    val navItems = if (compact) allItems.filter { it.id != OpSection.CREDENTIALS.id } else allItems
+    // En teléfono la barra inferior lleva cinco destinos sin recortes: lo demás vive en "Más" (NavOverflowHost).
+    val navItems = allItems
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val viewport = if (constraints.hasBoundedHeight) maxHeight else 720.dp
         CompositionLocalProvider(LocalOpViewportHeight provides viewport) {
+            NavOverflowHost(navItems = navItems, selectedId = sectionId, onSelect = { sectionId = it }) { barItems, barSelected, onBarSelect ->
             AdminScaffold(
                 title = OpSection.of(sectionId).label,
-                navItems = navItems,
-                selectedId = sectionId,
-                onSelect = { sectionId = it },
+                navItems = barItems,
+                selectedId = barSelected,
+                onSelect = onBarSelect,
                 userName = session.name,
                 userRole = session.role.label(),
                 onLogout = { repo.logout() },
@@ -109,16 +110,6 @@ private fun OperatorConsole(session: UserSession) {
                     }
                 },
                 actions = {
-                    if (compact) {
-                        val onCredentials = sectionId == OpSection.CREDENTIALS.id
-                        AppIconButton(
-                            AppIcons.Lock,
-                            onClick = { sectionId = OpSection.CREDENTIALS.id },
-                            contentDescription = OpSection.CREDENTIALS.label,
-                            tint = if (onCredentials) AppTheme.colors.ink else AppTheme.colors.inkMuted,
-                            plain = !onCredentials,
-                        )
-                    }
                     AppIconButton(
                         AppIcons.Refresh,
                         onClick = reload,
@@ -145,6 +136,7 @@ private fun OperatorConsole(session: UserSession) {
                         OpSection.CREDENTIALS -> CredentialsSection(store)
                     }
                 }
+            }
             }
         }
     }

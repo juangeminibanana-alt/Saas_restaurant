@@ -186,7 +186,11 @@ private fun KitchenHeader(
         BrandMark(name = tenant.name, logoUrl = tenant.theme.logoUrl, size = BoardDims.brandMark)
         Column(modifier = Modifier.weight(1f)) {
             AppText(text = tenant.name, style = AppTheme.type.title, maxLines = 1)
-            LabelText(text = "Cocina · " + session.name.ifBlank { session.role.label() })
+            // En teléfono no cabe el indicador "En vivo": su punto acompaña a la etiqueta.
+            LabelText(
+                text = "Cocina · " + session.name.ifBlank { session.role.label() },
+                dot = if (compact) (if (live) colors.positive else colors.warning) else null,
+            )
         }
         if (!compact) LiveIndicator(live = live, connectedOnce = connectedOnce)
         Row(horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.CenterVertically) {

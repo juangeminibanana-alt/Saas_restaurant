@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CornerBasedShape
+import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -36,7 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -306,7 +310,7 @@ private fun MenuPane(state: DinerState, tenant: TenantPublic, listState: LazyLis
                 } else {
                     item(key = row.key, contentType = row.kind) {
                         when (row.kind) {
-                            KIND_COVER -> MenuCover(tenant, state, coverHeight, gutter, compact)
+                            KIND_COVER -> MenuCover(tenant, state, coverHeight, gutter, compact, inset = expanded)
                             KIND_HEAD -> SectionHead(
                                 title = row.title,
                                 modifier = Modifier.padding(horizontal = gutter).padding(top = if (row.topGap) Space.x8 else 0.dp),
@@ -396,13 +400,23 @@ private fun Fact(text: AnnotatedString, modifier: Modifier = Modifier) {
  * Portada: la foto es la atmósfera y la identidad va encima, sobre el velo — antetítulo en mono, nombre 40/44,
  * un filete y la ficha de datos (estado · tiempo · calificación) de margen a margen. La imagen se apaga en el
  * fondo en vez de cortarse. Sin foto de portada, la identidad va sola sobre el fondo.
+ * [inset] (escritorio, junto al panel del pedido): la portada entra al margen y arranca a la altura del panel,
+ * con el radio de un mosaico; foto, identidad, buscador y secciones comparten la misma línea izquierda.
  */
 @Composable
-private fun MenuCover(tenant: TenantPublic, state: DinerState, height: Dp, gutter: Dp, compact: Boolean) {
+private fun MenuCover(tenant: TenantPublic, state: DinerState, height: Dp, gutter: Dp, compact: Boolean, inset: Boolean = false) {
     val colors = AppTheme.colors
     val cover = tenant.theme.coverUrl
     val hasPhoto = !cover.isNullOrBlank()
-    Box(if (hasPhoto) Modifier.fillMaxWidth().height(height) else Modifier.fillMaxWidth().padding(top = Space.x18)) {
+    val framed = hasPhoto && inset
+    val frame = when {
+        framed -> Modifier.fillMaxWidth().padding(start = gutter, end = gutter, top = Space.x6).height(height).clip(topRounded(AppTheme.shapes.lg))
+        hasPhoto -> Modifier.fillMaxWidth().height(height)
+        else -> Modifier.fillMaxWidth().padding(top = Space.x18)
+    }
+    // Con la portada enmarcada, la identidad ya está en el margen: no se vuelve a sangrar.
+    val textInset = if (framed) 0.dp else gutter
+    Box(frame) {
         if (hasPhoto) {
             val frame = framingFor(cover, if (compact) PhotoUse.COVER else PhotoUse.COVER_WIDE)
             DishImage(
@@ -415,7 +429,7 @@ private fun MenuCover(tenant: TenantPublic, state: DinerState, height: Dp, gutte
                 zoom = frame.zoom,
             )
         }
-        Column(Modifier.align(Alignment.BottomStart).widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = gutter)) {
+        Column(Modifier.align(Alignment.BottomStart).widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = textInset)) {
             if (tenant.tagline.isNotBlank()) {
                 LabelText(tenant.tagline, color = colors.inkMuted)
                 Spacer(Modifier.height(Space.x1))
@@ -443,7 +457,7 @@ private fun MenuCover(tenant: TenantPublic, state: DinerState, height: Dp, gutte
             AppIconButton(
                 icon = AppIcons.Receipt,
                 onClick = { state.screen = DinerScreen.HISTORY },
-                modifier = Modifier.align(Alignment.TopEnd).padding(gutter),
+                modifier = Modifier.align(Alignment.TopEnd).padding(if (framed) Space.x4 else gutter),
                 contentDescription = "Mis pedidos",
                 filled = true,
                 badge = state.history.size,
@@ -451,6 +465,10 @@ private fun MenuCover(tenant: TenantPublic, state: DinerState, height: Dp, gutte
         }
     }
 }
+
+/** El radio del mosaico sólo arriba: abajo la foto ya se apagó en el fondo y una esquina recortada asomaría. */
+private fun topRounded(shape: Shape): Shape =
+    (shape as? CornerBasedShape)?.copy(bottomStart = ZeroCornerSize, bottomEnd = ZeroCornerSize) ?: shape
 
 // ───────────────────────── Bento destacado ─────────────────────────
 

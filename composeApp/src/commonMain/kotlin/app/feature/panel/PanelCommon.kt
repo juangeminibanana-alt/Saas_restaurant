@@ -109,7 +109,8 @@ internal fun pagePadding(): Dp = when (LocalWindowSize.current) {
  */
 @Composable
 internal fun PanelPage(maxWidth: Dp = 1180.dp, content: @Composable ColumnScope.() -> Unit) {
-    Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
+    // Alineado a la izquierda: todas las secciones comparten el mismo borde, aunque unas sean más angostas.
+    Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopStart) {
         Column(
             Modifier.widthIn(max = maxWidth).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(Space.x4),

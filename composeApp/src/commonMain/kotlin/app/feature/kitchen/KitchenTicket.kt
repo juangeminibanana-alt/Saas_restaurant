@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -61,6 +62,9 @@ private object TicketDims {
     val metaIcon = 16.dp
     val enterSlide = Space.x2
     val exitSlide = Space.x18
+    /** Ancho de contenido desde el que la ficha "NUEVO" cabe junto al número (teléfono / pared). */
+    val roomy = 260.dp
+    val roomyLarge = 330.dp
 }
 
 internal val KitchenStage.actionIcon: ImageVector
@@ -138,15 +142,20 @@ internal fun KitchenTicket(
                 }
                 .flatSurface(colors.surface, colors.line, AppTheme.shapes.lg)
                 .padding(Space.x4),
-            verticalArrangement = Arrangement.spacedBy(Space.x3),
         ) {
+          BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // En columnas angostas (tableta) la ficha "NUEVO" baja al renglón del canal: el número y el
+            // cronómetro nunca se recortan.
+            val chipBesideNumber = maxWidth >= if (large) TicketDims.roomyLarge else TicketDims.roomy
+            val isNew = stage == KitchenStage.NEW
+          Column(verticalArrangement = Arrangement.spacedBy(Space.x3)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Space.x3),
             ) {
                 AppText(text = order.number, style = numberStyle, maxLines = 1)
-                if (stage == KitchenStage.NEW) NewChip()
+                if (isNew && chipBesideNumber) NewChip()
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                     ElapsedClock(since = order.kitchenSince, now = now, style = boardNumeral(compact = !large))
                 }
@@ -157,6 +166,7 @@ internal fun KitchenTicket(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Space.x2),
             ) {
+                if (isNew && !chipBesideNumber) NewChip()
                 TagBadge(text = order.channel.label(), tone = order.channel.tone())
                 GlyphIcon(order.type.icon(), tint = colors.inkSubtle, size = TicketDims.metaIcon)
                 AppText(
@@ -189,6 +199,8 @@ internal fun KitchenTicket(
                 loading = busy,
                 fullWidth = true,
             )
+          }
+          }
         }
     }
 }

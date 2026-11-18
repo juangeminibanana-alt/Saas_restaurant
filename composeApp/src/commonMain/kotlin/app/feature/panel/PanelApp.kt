@@ -25,6 +25,7 @@ import app.shared.model.UserSession
 import app.shared.util.label
 import app.shell.LocalRepo
 import app.shell.LoginGate
+import app.shell.NavOverflowHost
 import app.ui.components.AdminScaffold
 import app.ui.components.AppButton
 import app.ui.components.AppIcons
@@ -144,11 +145,13 @@ private fun PanelShell(session: UserSession, onOpenDiner: (String) -> Unit) {
 
     // Del restaurante sólo entra su acento: el panel lo usa para su única acción principal y sus conteos.
     AppTheme(brand = brand?.theme) {
+    // En teléfono caben cinco destinos: el resto vive en "Más" (una hoja), sin recortar la barra.
+    NavOverflowHost(navItems = navItems, selectedId = current.id, onSelect = { selectedId = it }) { barItems, barSelected, onBarSelect ->
     AdminScaffold(
         title = current.label,
-        navItems = navItems,
-        selectedId = current.id,
-        onSelect = { selectedId = it },
+        navItems = barItems,
+        selectedId = barSelected,
+        onSelect = onBarSelect,
         brand = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
                 BrandMark(name = restaurantName, logoUrl = brand?.theme?.logoUrl, size = 36.dp)
@@ -183,6 +186,7 @@ private fun PanelShell(session: UserSession, onOpenDiner: (String) -> Unit) {
                 PanelSection.TEAM -> TeamSection()
             }
         }
+    }
     }
     }
 }
