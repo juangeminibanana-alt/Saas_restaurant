@@ -9,8 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -39,12 +37,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -56,8 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -69,6 +65,7 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.zIndex
 import app.ui.theme.AppColors
 import app.ui.theme.AppTheme
+import app.ui.theme.LocalSurfaceLevel
 import app.ui.theme.LocalWindowSize
 import app.ui.theme.Motion
 import app.ui.theme.Space
@@ -77,22 +74,9 @@ import kotlinx.coroutines.delay
 
 // ───────────────────────── Superficie flotante (compartida) ─────────────────────────
 
-/** Sombra amplia y suave en claro; en oscuro, superficie más clara con filete. */
+/** Lo que flota en NOCHE no proyecta sombra ni desenfoca: superficie 1 con filete, sobre un velo negro al 60 %. */
 private fun Modifier.floatingSurface(colors: AppColors, shape: Shape): Modifier =
-    if (colors.isDark) {
-        this.clip(shape).background(colors.surfaceRaised).border(1.dp, colors.line, shape)
-    } else {
-        this
-            .shadow(
-                elevation = 32.dp,
-                shape = shape,
-                clip = false,
-                ambientColor = Color.Black.copy(alpha = 0.10f),
-                spotColor = Color.Black.copy(alpha = 0.18f),
-            )
-            .clip(shape)
-            .background(colors.surfaceRaised)
-    }
+    this.clip(shape).background(colors.surface).border(1.dp, colors.lineStrong, shape)
 
 /** Consume los toques para que no lleguen al velo que está detrás. */
 private fun Modifier.swallowTaps(): Modifier = pointerInput(Unit) { detectTapGestures { } }
@@ -115,7 +99,7 @@ fun AppDialog(
     ) {
         val colors = AppTheme.colors
         val appear = remember { Animatable(0f) }
-        LaunchedEffect(Unit) { appear.animateTo(1f, Motion.gentle()) }
+        LaunchedEffect(Unit) { appear.animateTo(1f, tween(Motion.BASE, easing = Motion.standard)) }
 
         Box(Modifier.fillMaxSize()) {
             Box(
@@ -133,33 +117,33 @@ fun AppDialog(
                     .widthIn(max = maxWidth)
                     .fillMaxWidth()
                     .graphicsLayer {
+                        // Entrada corta y sin rebote: fundido + 8 px de recorrido.
                         val p = appear.value
                         alpha = (p * 1.6f).coerceIn(0f, 1f)
-                        val s = 0.92f + 0.08f * p
-                        scaleX = s
-                        scaleY = s
-                        translationY = 12.dp.toPx() * (1f - p)
+                        translationY = 8.dp.toPx() * (1f - p)
                     }
                     .floatingSurface(colors, AppTheme.shapes.lg)
                     .swallowTaps()
                     .then(modifier),
             ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(start = Space.x6, end = Space.x3, top = Space.x4),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(Modifier.weight(1f)) {
-                        if (title != null) AppText(title, style = AppTheme.type.h3, maxLines = 2)
+                CompositionLocalProvider(LocalSurfaceLevel provides 1) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = Space.x6, end = Space.x3, top = Space.x3),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.weight(1f)) {
+                            if (title != null) AppText(title, style = AppTheme.type.h2, maxLines = 2)
+                        }
+                        AppIconButton(AppIcons.Close, onClick = { dismiss() }, contentDescription = "Cerrar", tint = colors.inkMuted, plain = true)
                     }
-                    AppIconButton(AppIcons.Close, onClick = { dismiss() }, contentDescription = "Cerrar", tint = colors.inkMuted)
+                    Column(
+                        Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
+                            .padding(start = Space.x6, end = Space.x6, top = Space.x2, bottom = Space.x6),
+                        content = content,
+                    )
                 }
-                Column(
-                    Modifier
-                        .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState())
-                        .padding(start = Space.x6, end = Space.x6, top = Space.x2, bottom = Space.x6),
-                    content = content,
-                )
             }
         }
     }
@@ -193,7 +177,7 @@ fun AppBottomSheet(
         label = "scrim",
     ) { if (it) 1f else 0f }
     val hidden by transition.animateFloat(
-        transitionSpec = { if (targetState) Motion.gentle<Float>() else tween(Motion.BASE, easing = Motion.exit) },
+        transitionSpec = { if (targetState) tween(Motion.SLOW, easing = Motion.standard) else tween(Motion.BASE, easing = Motion.exit) },
         label = "offset",
     ) { if (it) 0f else 1f }
 
@@ -219,22 +203,20 @@ fun AppBottomSheet(
                     .graphicsLayer {
                         val p = 1f - hidden
                         alpha = (p * 1.6f).coerceIn(0f, 1f)
-                        val s = 0.94f + 0.06f * p
-                        scaleX = s
-                        scaleY = s
-                        translationY = 20.dp.toPx() * hidden
+                        translationY = 8.dp.toPx() * hidden
                     }
                     .floatingSurface(colors, AppTheme.shapes.lg)
                     .swallowTaps()
                     .then(modifier),
-                content = content,
-            )
+            ) {
+                CompositionLocalProvider(LocalSurfaceLevel provides 1) { content() }
+            }
         } else {
-            val tail = 48.dp // cola bajo el borde inferior: permite el rebote del resorte sin dejar huecos
+            val tail = 48.dp // cola bajo el borde inferior: la hoja nunca deja ver un hueco al asentarse
             val baseShape = AppTheme.shapes.lg
             val shape: Shape = (baseShape as? CornerBasedShape)
                 ?.copy(bottomStart = CornerSize(0.dp), bottomEnd = CornerSize(0.dp))
-                ?: RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                ?: RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
             var dragPx by remember { mutableFloatStateOf(0f) }
             val dismissThreshold = with(LocalDensity.current) { 96.dp.toPx() }
             LaunchedEffect(visible) { if (visible) dragPx = 0f }
@@ -272,9 +254,9 @@ fun AppBottomSheet(
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.width(40.dp).height(4.dp).background(colors.lineStrong, CircleShape))
+                    Box(Modifier.width(36.dp).height(4.dp).background(colors.lineStrong, AppTheme.shapes.xs))
                 }
-                content()
+                CompositionLocalProvider(LocalSurfaceLevel provides 1) { content() }
             }
         }
     }
@@ -329,42 +311,25 @@ private fun ToastItem(entry: ToastEntry) {
     }
     AnimatedVisibility(
         visibleState = entry.visibility,
-        enter = slideInVertically(Motion.gentle()) { it } + fadeIn(tween(Motion.BASE)) + scaleIn(Motion.gentle(), initialScale = 0.92f),
-        exit = slideOutVertically(tween(Motion.BASE, easing = Motion.exit)) { it / 2 } +
-            fadeOut(tween(Motion.BASE, easing = Motion.exit)) + scaleOut(tween(Motion.BASE), targetScale = 0.96f),
+        enter = slideInVertically(tween(Motion.BASE, easing = Motion.standard)) { it / 2 } + fadeIn(tween(Motion.BASE)),
+        exit = slideOutVertically(tween(Motion.BASE, easing = Motion.exit)) { it / 2 } + fadeOut(tween(Motion.BASE, easing = Motion.exit)),
     ) {
-        val accent = when (entry.tone) {
-            Tone.SUCCESS -> colors.success
-            Tone.WARNING -> colors.warning
-            Tone.DANGER -> colors.danger
-            Tone.INFO -> colors.info
-            Tone.PRIMARY -> colors.primary
-            Tone.NEUTRAL -> null
-        }
-        val icon = when (entry.tone) {
-            Tone.SUCCESS -> AppIcons.Check
-            Tone.WARNING, Tone.DANGER -> AppIcons.Warning
-            else -> AppIcons.Info
-        }
-        // Píldora en tinta inversa: se lee igual de bien sobre papel claro u oscuro.
-        val shape = AppTheme.shapes.pill
+        // Aviso plano: superficie 2 con filete, punto sólido del tono y texto en tinta. Sin sombra.
+        val shape = AppTheme.shapes.md
         Row(
             Modifier
                 .widthIn(max = 460.dp)
-                .shadow(18.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.10f), spotColor = Color.Black.copy(alpha = 0.22f))
                 .clip(shape)
-                .background(colors.ink)
-                .padding(start = Space.x3, end = Space.x5, top = Space.x3, bottom = Space.x3),
+                .background(colors.surfaceRaised)
+                .border(1.dp, colors.lineStrong, shape)
+                .padding(horizontal = Space.x4, vertical = Space.x3),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                Modifier.size(24.dp).background(accent ?: colors.canvas.copy(alpha = 0.16f), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                GlyphIcon(icon, tint = if (accent != null) Color.White else colors.canvas, size = 14.dp)
+            if (entry.tone != Tone.NEUTRAL) {
+                StatusDot(toneColor(entry.tone))
+                Spacer(Modifier.width(Space.x3))
             }
-            Spacer(Modifier.width(Space.x3))
-            AppText(entry.message, style = AppTheme.type.bodySm, color = colors.canvas, maxLines = 3)
+            AppText(entry.message, style = AppTheme.type.bodySm, color = colors.ink, maxLines = 3)
         }
     }
 }

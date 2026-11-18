@@ -2,14 +2,10 @@ package app.feature.operator
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,10 +15,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,8 +24,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -53,13 +45,17 @@ import app.ui.components.AppIcons
 import app.ui.components.AppText
 import app.ui.components.AppTextField
 import app.ui.components.ButtonVariant
+import app.ui.components.LabelText
+import app.ui.components.SelectionMark
 import app.ui.components.StatusPill
 import app.ui.components.TagBadge
 import app.ui.components.Tone
+import app.ui.components.flatSurface
 import app.ui.components.pressable
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
 import app.ui.theme.Motion
+import app.ui.theme.Sizes
 import app.ui.theme.Space
 import app.ui.theme.WindowSize
 import kotlinx.coroutines.launch
@@ -139,6 +135,7 @@ internal fun TenantStatusDialog(tenant: TenantSummary, store: OperatorStore, onD
 
 // ───────────────────────── Cambiar plan ─────────────────────────
 
+/** Opción de plan: superficie + filete con la marca de selección en tinta; elegida, el filete pasa a tinta. */
 @Composable
 internal fun PlanOptionCard(
     plan: Plan,
@@ -148,40 +145,27 @@ internal fun PlanOptionCard(
     note: String? = null,
 ) {
     val colors = AppTheme.colors
-    val border by animateColorAsState(if (selected) colors.primary else colors.line, tween(Motion.BASE), label = "plan-border")
-    val bg by animateColorAsState(if (selected) colors.primarySoft else colors.surface, tween(Motion.BASE), label = "plan-bg")
-    val check by animateFloatAsState(if (selected) 1f else 0f, Motion.bouncy(), label = "plan-check")
+    val ring by animateColorAsState(if (selected) colors.select else colors.line, tween(Motion.FAST), label = "plan-ring")
     Row(
         modifier
             .fillMaxWidth()
-            .clip(AppTheme.shapes.md)
-            .background(bg)
-            .border(if (selected) 1.5.dp else 1.dp, border, AppTheme.shapes.md)
+            .flatSurface(AppTheme.controlFill, ring, AppTheme.shapes.md)
             .pressable(scale = 0.99f, onClick = onClick)
             .padding(horizontal = Space.x4, vertical = Space.x3),
         horizontalArrangement = Arrangement.spacedBy(Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        SelectionMark(selected)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Space.x1)) {
             Row(horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.CenterVertically) {
                 AppText(plan.name, Modifier.weight(1f, fill = false), style = AppTheme.type.title, maxLines = 1)
                 if (note != null) TagBadge(note) else if (plan.highlighted) TagBadge("Recomendado", tone = Tone.PRIMARY)
             }
-            AppText(
-                "${formatMoney(plan.priceCents)} al mes · ${formatBps(plan.feeBps)} de comisión por pedido",
-                style = AppTheme.type.bodySm,
-                color = colors.inkMuted,
-            )
+            AppText("${formatBps(plan.feeBps)} de comisión por pedido", style = AppTheme.type.bodySm, color = colors.inkMuted)
         }
-        Box(
-            Modifier
-                .size(22.dp)
-                .clip(CircleShape)
-                .background(if (selected) colors.primary else colors.surface)
-                .border(1.5.dp, if (selected) colors.primary else colors.lineStrong, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            OpIcon(AppIcons.Check, tint = colors.onPrimary, size = 14.dp, modifier = Modifier.scale(check))
+        Column(horizontalAlignment = Alignment.End) {
+            AppText(formatMoney(plan.priceCents), style = AppTheme.type.monoMd, maxLines = 1)
+            LabelText("al mes")
         }
     }
 }
@@ -263,8 +247,8 @@ internal fun TenantDetailDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.x4), verticalAlignment = Alignment.CenterVertically) {
                     TenantMonogram(tenant.name, tenant.primary, size = 52.dp)
                     Column(Modifier.weight(1f)) {
-                        AppText(tenant.name, style = AppTheme.type.h3, maxLines = 2)
-                        AppText("/r/${tenant.slug}", style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
+                        AppText(tenant.name, style = AppTheme.type.h2, maxLines = 2)
+                        AppText("/r/${tenant.slug}", style = AppTheme.type.mono, color = AppTheme.colors.inkMuted, maxLines = 1)
                     }
                     StatusPill(tenant.status.label(), tone = tenant.status.tone())
                 }
@@ -287,6 +271,7 @@ internal fun TenantDetailDialog(
                         "Comisión por pedido",
                         if (plan != null) formatBps(plan.feeBps) else "Según plan",
                         Modifier.weight(1f),
+                        mono = plan != null,
                     )
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x4)) {
@@ -318,17 +303,17 @@ internal fun TenantDetailDialog(
     }
 }
 
+/** Cifra del detalle: mosaico con filete, etiqueta en mono y el número en mono 20/24. */
 @Composable
 private fun DetailFigure(label: String, value: String, modifier: Modifier = Modifier) {
     Column(
         modifier
-            .clip(AppTheme.shapes.md)
-            .background(AppTheme.colors.surfaceSunken)
-            .padding(horizontal = Space.x4, vertical = Space.x3),
+            .flatSurface(AppTheme.controlFill, AppTheme.colors.line, AppTheme.shapes.md)
+            .padding(horizontal = Space.x3, vertical = Space.x3),
         verticalArrangement = Arrangement.spacedBy(Space.x1),
     ) {
-        AppText(label, style = AppTheme.type.label, color = AppTheme.colors.inkSubtle, maxLines = 1)
-        AppText(value, style = AppTheme.type.h3, maxLines = 1)
+        LabelText(label)
+        AppText(value, style = AppTheme.type.monoLg, maxLines = 1)
     }
 }
 
@@ -489,7 +474,7 @@ internal fun CreateTenantDialog(store: OperatorStore, onDismiss: () -> Unit) {
                             error = passwordError.takeIf { submitted },
                         )
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.x2)) {
-                            AppText("Plan", style = AppTheme.type.label, color = AppTheme.colors.inkMuted)
+                            LabelText("Plan")
                             if (store.plans.isEmpty()) {
                                 AppText(
                                     "Aún no hay planes. Crea uno en la sección Planes.",
@@ -552,22 +537,21 @@ private fun CreatedTenantSummary(
     onOpen: () -> Unit,
     onDone: () -> Unit,
 ) {
-    val pop = remember { Animatable(0.4f) }
-    LaunchedEffect(Unit) { pop.animateTo(1f, Motion.bouncy()) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
         Column(
             Modifier.fillMaxWidth().heightIn(max = dialogBodyMaxHeight()).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Space.x4),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(Space.x4), verticalAlignment = Alignment.CenterVertically) {
+                // Confirmación plana: cuadro con filete y la palomita en verde. Sin rebote.
                 Box(
-                    Modifier.scale(pop.value).size(48.dp).clip(CircleShape).background(AppTheme.colors.successSoft),
+                    Modifier.size(Sizes.controlLg).flatSurface(AppTheme.controlFill, AppTheme.colors.lineStrong, AppTheme.shapes.md),
                     contentAlignment = Alignment.Center,
                 ) {
-                    OpIcon(AppIcons.Check, tint = AppTheme.colors.success, size = 24.dp)
+                    OpIcon(AppIcons.Check, tint = AppTheme.colors.positive, size = Sizes.icon)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Space.x1)) {
-                    AppText("${tenant.name} ya tiene su menú en línea", style = AppTheme.type.h3)
+                    AppText("${tenant.name} ya tiene su menú en línea", style = AppTheme.type.h2)
                     AppText(
                         "Plan ${tenant.planName}. Comparte el link y las credenciales con el dueño.",
                         style = AppTheme.type.bodySm,

@@ -1,7 +1,5 @@
 package app.feature.site
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -31,7 +30,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -51,12 +49,12 @@ import app.ui.components.AppText
 import app.ui.components.BrandMark
 import app.ui.components.ButtonSize
 import app.ui.components.ButtonVariant
+import app.ui.components.edgeBottom
 import app.ui.components.pressable
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
 import app.ui.theme.Motion
 import app.ui.theme.Space
-import app.ui.theme.ThemeController
 import app.ui.theme.WindowSize
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
@@ -128,7 +126,7 @@ internal class SiteData {
 
 // ───────────────────────── Raíz ─────────────────────────
 
-private val HeaderHeight = 68.dp
+private val HeaderHeight = Space.x14 + Space.x2
 
 @Composable
 fun SiteApp(onNavigate: (route: String) -> Unit) {
@@ -137,6 +135,10 @@ fun SiteApp(onNavigate: (route: String) -> Unit) {
     }
 }
 
+/**
+ * Página de venta en NOCHE: negra, plana y exacta. Titular grande en Geist, antetítulos en mono, los tres
+ * restaurantes de demostración con su propio acento y UNA sola acción en brasa a la vista ("Empieza gratis").
+ */
 @Composable
 private fun SitePage(onNavigate: (route: String) -> Unit) {
     val repo = LocalRepo.current
@@ -155,7 +157,7 @@ private fun SitePage(onNavigate: (route: String) -> Unit) {
         val y = anchors[id]
         if (y != null) {
             scope.launch {
-                scroll.animateScrollTo((y - headerPx).toInt().coerceAtLeast(0), tween(700, easing = Motion.standard))
+                scroll.animateScrollTo((y - headerPx).toInt().coerceAtLeast(0), tween(Motion.HERO, easing = Motion.standard))
             }
         }
     }
@@ -172,7 +174,7 @@ private fun SitePage(onNavigate: (route: String) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize().background(c.canvas)) {
         val viewportPx = if (constraints.hasBoundedHeight) constraints.maxHeight.toFloat() else 2400f
         val viewportHeight: Dp = if (constraints.hasBoundedHeight) maxHeight else 720.dp
-        val env = remember(scroll, viewportPx) { SiteScroll(scroll, viewportPx) }
+        val env = remember(scroll, viewportPx, headerPx) { SiteScroll(scroll, viewportPx, headerPx) }
         val gap = sectionGap()
 
         CompositionLocalProvider(LocalSiteScroll provides env) {
@@ -204,14 +206,14 @@ private fun SitePage(onNavigate: (route: String) -> Unit) {
                 Spacer(Modifier.height(gap))
                 SiteFooter(onAnchor = goTo, onLogin = { onNavigate("/panel") })
             }
-        }
 
-        SiteHeader(
-            scrolled = scroll.value > 8,
-            onAnchor = goTo,
-            onLogin = { onNavigate("/panel") },
-            onSignup = { openSignup(null) },
-        )
+            SiteHeader(
+                scrolled = scroll.value > 8,
+                onAnchor = goTo,
+                onLogin = { onNavigate("/panel") },
+                onSignup = { openSignup(null) },
+            )
+        }
 
         AppBottomSheet(visible = signupOpen, onDismiss = { signupOpen = false }) {
             key(signupRun) {
@@ -236,57 +238,48 @@ private fun SitePage(onNavigate: (route: String) -> Unit) {
 
 /** Espacio de marca: logo configurado o monograma neutro + nombre. */
 @Composable
-internal fun BrandSlot(modifier: Modifier = Modifier, size: Dp = 32.dp) {
+internal fun BrandSlot(modifier: Modifier = Modifier, size: Dp = Space.x8) {
     val brand = SiteConfig.brand
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
         BrandMark(name = brand.name, logoUrl = brand.logoUrl, size = size)
         AppText(brand.name, style = AppTheme.type.title, maxLines = 1)
     }
 }
 
 @Composable
-internal fun ThemeToggle(modifier: Modifier = Modifier) {
-    val c = AppTheme.colors
-    AppIconButton(
-        icon = if (c.isDark) AppIcons.Sun else AppIcons.Moon,
-        onClick = { ThemeController.toggle(c.isDark) },
-        modifier = modifier,
-        contentDescription = if (c.isDark) "Cambiar a modo claro" else "Cambiar a modo oscuro",
-        tint = c.inkMuted,
-    )
-}
-
-@Composable
 internal fun NavLink(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.pressable { onClick() }.heightIn(min = 44.dp).padding(horizontal = Space.x3),
+        modifier = modifier.pressable { onClick() }.heightIn(min = Space.tap).padding(horizontal = Space.x3),
         contentAlignment = Alignment.Center,
     ) {
-        AppText(text, style = AppTheme.type.body.copy(fontWeight = FontWeight.Medium), color = AppTheme.colors.inkMuted)
+        AppText(text, style = AppTheme.type.bodySm.copy(fontWeight = FontWeight.Medium), color = AppTheme.colors.inkMuted, maxLines = 1)
     }
 }
 
+/**
+ * Encabezado fijo: sólido (sin transparencias ni desenfoque) y con un filete al despegarse del inicio.
+ * Su "Empieza gratis" sólo va en brasa cuando no hay otra acción en brasa a la vista.
+ */
 @Composable
 private fun SiteHeader(scrolled: Boolean, onAnchor: (String) -> Unit, onLogin: () -> Unit, onSignup: () -> Unit) {
     val c = AppTheme.colors
     val size = LocalWindowSize.current
     val gutter = siteGutter()
-    val background by animateColorAsState(
-        targetValue = c.canvas.copy(alpha = if (scrolled) 0.96f else 0f),
-        animationSpec = tween(Motion.BASE),
-    )
-    val lineAlpha by animateFloatAsState(if (scrolled) 1f else 0f, tween(Motion.BASE))
+    val env = LocalSiteScroll.current
+    val accentElsewhere by remember(env) { derivedStateOf { env?.accentInView ?: false } }
+    val cta = if (accentElsewhere) ButtonVariant.SECONDARY else ButtonVariant.PRIMARY
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(HeaderHeight)
-            .background(background)
+            .background(c.canvas)
+            .then(if (scrolled) Modifier.edgeBottom(c.line) else Modifier)
             .pointerInput(Unit) {},
         contentAlignment = Alignment.TopCenter,
     ) {
         Row(
             modifier = Modifier
-                .widthIn(max = 1180.dp + gutter * 2)
+                .widthIn(max = SiteMaxWidth + gutter * 2)
                 .fillMaxSize()
                 .padding(horizontal = gutter),
             verticalAlignment = Alignment.CenterVertically,
@@ -300,24 +293,14 @@ private fun SiteHeader(scrolled: Boolean, onAnchor: (String) -> Unit, onLogin: (
                 Spacer(Modifier.width(Space.x3))
             }
             if (size == WindowSize.COMPACT) {
-                AppIconButton(icon = AppIcons.Person, onClick = onLogin, contentDescription = "Iniciar sesión")
+                AppIconButton(icon = AppIcons.Person, onClick = onLogin, contentDescription = "Iniciar sesión", plain = true)
                 Spacer(Modifier.width(Space.x1))
-                AppButton("Empieza gratis", onClick = onSignup, size = ButtonSize.SM)
+                AppButton("Empieza gratis", onClick = onSignup, variant = cta, size = ButtonSize.SM)
             } else {
-                ThemeToggle()
-                Spacer(Modifier.width(Space.x1))
-                AppButton("Iniciar sesión", onClick = onLogin, variant = ButtonVariant.GHOST)
+                AppButton("Iniciar sesión", onClick = onLogin, variant = ButtonVariant.GHOST, size = ButtonSize.SM)
                 Spacer(Modifier.width(Space.x2))
-                AppButton("Empieza gratis", onClick = onSignup)
+                AppButton("Empieza gratis", onClick = onSignup, variant = cta, size = ButtonSize.SM)
             }
         }
-        Box(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(1.dp)
-                .graphicsLayer { alpha = lineAlpha }
-                .background(c.line),
-        )
     }
 }

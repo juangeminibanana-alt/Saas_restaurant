@@ -1,7 +1,6 @@
 package app.feature.panel
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +17,7 @@ import app.shared.model.TenantPublic
 import app.ui.components.*
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
+import app.ui.theme.Sizes
 import app.ui.theme.Space
 import app.ui.theme.WindowSize
 
@@ -39,39 +39,35 @@ internal fun LinksSection(brand: TenantPublic?, fallbackSlug: String, fallbackNa
     PanelPage {
         PageHeader("Enlaces y QR", subtitle = "Comparte tu menú con un enlace o con un código QR en cada mesa")
 
+
         if (slug.isBlank()) {
             ErrorState("No encontramos el enlace de tu restaurante. Vuelve a iniciar sesión e intenta de nuevo.")
             return@PanelPage
         }
 
         val linkCard: @Composable (Modifier) -> Unit = { modifier ->
-            AppCard(modifier, padding = Space.x5) {
+            AppCard(modifier, padding = Space.x4) {
                 Column(verticalArrangement = Arrangement.spacedBy(Space.x4)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
-                        IconBadge(AppIcons.Link, tone = Tone.PRIMARY)
-                        Column(Modifier.weight(1f)) {
-                            AppText("Enlace público de tu menú", style = AppTheme.type.title)
-                            AppText("Funciona en cualquier teléfono, sin descargar nada", style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted)
-                        }
-                    }
+                    SectionHeader("Enlace de tu menú", subtitle = "Funciona en cualquier teléfono, sin descargar nada")
                     CopyField(text = link, onCopy = { copy(link, "Enlace copiado") })
                     val domain = brand?.customDomain?.takeIf { it.isNotBlank() }
                     if (domain != null) {
                         FieldLabel("Tu dominio propio")
                         CopyField(text = "https://$domain", onCopy = { copy("https://$domain", "Dominio copiado") })
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
-                        AppButton("Abrir menú", onClick = { onOpenDiner(slug) }, icon = AppIcons.ExternalLink)
-                        AppButton("Copiar enlace", onClick = { copy(link, "Enlace copiado") }, variant = ButtonVariant.SECONDARY, icon = AppIcons.Copy)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                        val grow = if (size == WindowSize.COMPACT) Modifier.weight(1f) else Modifier
+                        AppButton("Abrir menú", onClick = { onOpenDiner(slug) }, modifier = grow, trailingIcon = AppIcons.Forward)
+                        AppButton("Copiar", onClick = { copy(link, "Enlace copiado") }, modifier = grow, variant = ButtonVariant.SECONDARY, icon = AppIcons.Copy)
                     }
                     AppDivider()
                     listOf(
                         "Ponlo en la biografía de tus redes sociales",
                         "Envíalo por mensaje a tus clientes frecuentes",
                         "Imprime el QR para tus mesas, tu mostrador y tus bolsas",
-                    ).forEach { tip ->
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
-                            PanelIcon(AppIcons.Check, tint = AppTheme.colors.success, size = 16.dp)
+                    ).forEachIndexed { i, tip ->
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
+                            LabelText("0${i + 1}")
                             AppText(tip, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted)
                         }
                     }
@@ -80,40 +76,39 @@ internal fun LinksSection(brand: TenantPublic?, fallbackSlug: String, fallbackNa
         }
 
         val qrCard: @Composable (Modifier) -> Unit = { modifier ->
-            AppCard(modifier, padding = Space.x5) {
+            AppCard(modifier, padding = Space.x4) {
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Space.x3)) {
-                    BrandMark(name = name, logoUrl = brand?.theme?.logoUrl, size = 44.dp)
-                    AppText(name, style = AppTheme.type.h3, maxLines = 1, textAlign = TextAlign.Center)
+                    LabelText("Escanea para ver el menú y pedir")
                     QrPlate(content = link, size = 220.dp)
-                    AppText("Escanea para ver el menú y pedir", style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, textAlign = TextAlign.Center)
+                    AppText(name, style = AppTheme.type.h2, maxLines = 1, textAlign = TextAlign.Center)
                 }
             }
         }
 
         if (size == WindowSize.EXPANDED) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x5)) {
-                linkCard(Modifier.weight(1.4f))
-                qrCard(Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                linkCard(Modifier.weight(1.4f).fillMaxHeight())
+                qrCard(Modifier.weight(1f).fillMaxHeight())
             }
         } else {
             linkCard(Modifier.fillMaxWidth())
             qrCard(Modifier.fillMaxWidth())
         }
 
-        AppCard(Modifier.fillMaxWidth(), padding = Space.x5) {
+        AppCard(Modifier.fillMaxWidth(), padding = Space.x4) {
             Column(verticalArrangement = Arrangement.spacedBy(Space.x4)) {
                 SectionHeader(
                     "QR por mesa",
                     subtitle = "Cada código abre tu menú con la mesa ya elegida. Toca una tarjeta para copiar su enlace.",
-                    action = { QuantityStepper(quantity = tables, onChange = { tables = it }, min = 1, max = 40, compact = true) },
+                    // El número de mesas no es un pedido: la cifra va neutra, sin ficha de brasa.
+                    action = { QuantityStepper(quantity = tables, onChange = { tables = it }, min = 1, max = 40, compact = true, inOrder = false) },
                 )
-                AppText("$tables ${if (tables == 1) "mesa" else "mesas"}", style = AppTheme.type.label, color = AppTheme.colors.inkSubtle)
                 val columns = when (size) {
                     WindowSize.COMPACT -> 2
                     WindowSize.MEDIUM -> 4
                     WindowSize.EXPANDED -> 6
                 }
-                SimpleGrid(items = (1..tables).toList(), columns = columns, spacing = Space.x3) { n ->
+                SimpleGrid(items = (1..tables).toList(), columns = columns) { n ->
                     val tableLink = "$link?mesa=$n"
                     TableQrCard(number = n, link = tableLink, onClick = { copy(tableLink, "Enlace de la Mesa $n copiado") })
                 }
@@ -124,15 +119,14 @@ internal fun LinksSection(brand: TenantPublic?, fallbackSlug: String, fallbackNa
 
 @Composable
 private fun CopyField(text: String, onCopy: () -> Unit) {
-    val shape = AppTheme.shapes.sm
+    // Un dato copiable: superficie + filete (radio 12, alto 48) con el enlace en mono.
     Row(
-        Modifier.fillMaxWidth().clip(shape).background(AppTheme.colors.surfaceSunken).border(1.dp, AppTheme.colors.line, shape)
-            .padding(start = Space.x4, end = Space.x1, top = Space.x1, bottom = Space.x1),
+        Modifier.fillMaxWidth().height(Sizes.controlLg).flatSurface(AppTheme.controlFill, AppTheme.colors.line, AppTheme.shapes.md)
+            .padding(start = Space.x4),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Space.x2),
     ) {
-        AppText(text, Modifier.weight(1f), style = AppTheme.type.body, maxLines = 1)
-        AppIconButton(AppIcons.Copy, onClick = onCopy, contentDescription = "Copiar")
+        AppText(text, Modifier.weight(1f), style = AppTheme.type.mono, maxLines = 1)
+        AppIconButton(AppIcons.Copy, onClick = onCopy, contentDescription = "Copiar", tint = AppTheme.colors.inkMuted, plain = true)
     }
 }
 
@@ -146,15 +140,16 @@ private fun QrPlate(content: String, size: Dp) {
 
 @Composable
 private fun TableQrCard(number: Int, link: String, onClick: () -> Unit) {
-    val shape = AppTheme.shapes.md
     Column(
-        Modifier.fillMaxWidth().clip(shape).background(AppTheme.colors.surface).border(1.dp, AppTheme.colors.line, shape)
+        Modifier.fillMaxWidth().flatSurface(AppTheme.controlFill, AppTheme.colors.line, AppTheme.shapes.md)
             .pressable(onClick = onClick).padding(Space.x3),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Space.x2),
     ) {
         QrPlate(content = link, size = 92.dp)
-        AppText("Mesa $number", style = AppTheme.type.title, maxLines = 1)
-        AppText("?mesa=$number", style = AppTheme.type.label, color = AppTheme.colors.inkSubtle, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+            LabelText("Mesa")
+            AppText(number.toString().padStart(2, '0'), style = AppTheme.type.monoMd, maxLines = 1)
+        }
     }
 }

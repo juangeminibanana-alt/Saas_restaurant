@@ -1,13 +1,11 @@
 package app.feature.panel
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.shared.api.RealtimeEvent
@@ -22,6 +20,7 @@ import app.shell.LocalRepo
 import app.ui.components.*
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
+import app.ui.theme.Sizes
 import app.ui.theme.Space
 import app.ui.theme.WindowSize
 import kotlinx.coroutines.delay
@@ -138,16 +137,14 @@ internal fun OrdersSection() {
                 } else if (size == WindowSize.EXPANDED) {
                     AppCard(Modifier.fillMaxWidth(), padding = 0.dp) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = Space.x4, vertical = Space.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x4)) {
-                            val head = AppTheme.type.label
-                            val muted = AppTheme.colors.inkSubtle
-                            AppText("PEDIDO", Modifier.width(84.dp), style = head, color = muted)
-                            AppText("ESTADO", Modifier.width(150.dp), style = head, color = muted)
-                            AppText("CANAL", Modifier.weight(1f), style = head, color = muted)
-                            AppText("TIPO", Modifier.weight(1.2f), style = head, color = muted)
-                            AppText("CLIENTE", Modifier.weight(1.4f), style = head, color = muted)
-                            AppText("TOTAL", Modifier.width(96.dp), style = head, color = muted, textAlign = TextAlign.End)
-                            AppText("HORA", Modifier.width(96.dp), style = head, color = muted, textAlign = TextAlign.End)
-                            Spacer(Modifier.width(18.dp))
+                            ColumnLabel("Pedido", Modifier.width(84.dp))
+                            ColumnLabel("Estado", Modifier.width(168.dp))
+                            ColumnLabel("Canal", Modifier.weight(1f))
+                            ColumnLabel("Tipo", Modifier.weight(1.2f))
+                            ColumnLabel("Cliente", Modifier.weight(1.4f))
+                            ColumnLabel("Total", Modifier.width(96.dp), end = true)
+                            ColumnLabel("Hora", Modifier.width(96.dp), end = true)
+                            Spacer(Modifier.width(Sizes.icon))
                         }
                         visible.forEach { order ->
                             key(order.id) {
@@ -192,14 +189,14 @@ private fun OrderTableRow(order: Order, now: Long, onClick: () -> Unit) {
         Modifier.fillMaxWidth().pressable(scale = 0.995f, onClick = onClick).padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x4),
     ) {
-        AppText(order.number, Modifier.width(84.dp), style = AppTheme.type.title, maxLines = 1)
-        Box(Modifier.width(150.dp)) { StatusPill(order.status.label(), tone = order.status.tone()) }
+        AppText(order.number, Modifier.width(84.dp), style = AppTheme.type.mono, maxLines = 1)
+        Box(Modifier.width(168.dp)) { StatusPill(order.status.label(), tone = order.status.tone()) }
         AppText(order.channel.label(), Modifier.weight(1f), style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
         AppText(order.typeText(), Modifier.weight(1.2f), style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
-        AppText(order.customerText(), Modifier.weight(1.4f), maxLines = 1)
-        AppText(formatMoney(order.totalCents), Modifier.width(96.dp), style = AppTheme.type.title, textAlign = TextAlign.End, maxLines = 1)
+        AppText(order.customerText(), Modifier.weight(1.4f), style = AppTheme.type.title, maxLines = 1)
+        AppText(formatMoney(order.totalCents), Modifier.width(96.dp), style = AppTheme.type.mono, textAlign = TextAlign.End, maxLines = 1)
         AppText(relativeTime(order.createdAt, now), Modifier.width(96.dp), style = AppTheme.type.bodySm, color = AppTheme.colors.inkSubtle, textAlign = TextAlign.End, maxLines = 1)
-        PanelIcon(AppIcons.ChevronRight, tint = AppTheme.colors.inkSubtle)
+        PanelIcon(AppIcons.ChevronRight, tint = AppTheme.colors.inkSubtle, size = Sizes.icon)
     }
 }
 
@@ -208,13 +205,15 @@ private fun OrderCard(order: Order, now: Long, onClick: () -> Unit) {
     AppCard(Modifier.fillMaxWidth(), onClick = onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(Space.x2)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
-                AppText(order.number, Modifier.weight(1f), style = AppTheme.type.title, maxLines = 1)
+                AppText(order.number, Modifier.weight(1f), style = AppTheme.type.monoMd, maxLines = 1)
                 StatusPill(order.status.label(), tone = order.status.tone())
             }
-            AppText(order.customerText(), maxLines = 1)
-            AppText("${order.typeText()} · ${order.channel.label()}", style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AppText(formatMoney(order.totalCents), Modifier.weight(1f), style = AppTheme.type.title, maxLines = 1)
+            Column {
+                AppText(order.customerText(), style = AppTheme.type.title, maxLines = 1)
+                AppText("${order.typeText()} · ${order.channel.label()}", style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
+            }
+            Row(Modifier.fillMaxWidth().edgeTop(AppTheme.colors.line).padding(top = Space.x2), verticalAlignment = Alignment.CenterVertically) {
+                AppText(formatMoney(order.totalCents), Modifier.weight(1f), style = AppTheme.type.mono, maxLines = 1)
                 AppText(relativeTime(order.createdAt, now), style = AppTheme.type.bodySm, color = AppTheme.colors.inkSubtle, maxLines = 1)
             }
         }
@@ -247,7 +246,7 @@ private fun OrderDetailDialog(order: Order, busy: Boolean, onDismiss: () -> Unit
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 AppText(order.customerText(), style = AppTheme.type.title)
-                if (order.customerPhone.isNotBlank()) AppText(order.customerPhone, style = AppTheme.type.bodySm, color = c.inkMuted)
+                if (order.customerPhone.isNotBlank()) AppText(order.customerPhone, style = AppTheme.type.mono, color = c.inkMuted)
                 if (order.address.isNotBlank()) AppText(order.address, style = AppTheme.type.bodySm, color = c.inkMuted)
                 AppText("Recibido ${relativeTime(order.createdAt)}", style = AppTheme.type.bodySm, color = c.inkSubtle)
             }
@@ -259,7 +258,7 @@ private fun OrderDetailDialog(order: Order, busy: Boolean, onDismiss: () -> Unit
             AppDivider()
             order.lines.forEach { line ->
                 Row(horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
-                    AppText("${line.quantity}×", style = AppTheme.type.title, color = c.inkMuted)
+                    AppText(line.quantity.toString(), Modifier.width(Space.x6), style = AppTheme.type.monoMd, color = c.inkMuted, maxLines = 1)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         AppText(line.name, style = AppTheme.type.title)
                         line.modifiers.forEach { m ->
@@ -270,14 +269,11 @@ private fun OrderDetailDialog(order: Order, busy: Boolean, onDismiss: () -> Unit
                         }
                         if (line.notes.isNotBlank()) AppText("Nota: ${line.notes}", style = AppTheme.type.bodySm, color = c.warning)
                     }
-                    AppText(formatMoney(line.lineTotalCents), maxLines = 1)
+                    AppText(formatMoney(line.lineTotalCents), style = AppTheme.type.mono, maxLines = 1)
                 }
             }
             if (order.notes.isNotBlank()) {
-                Row(Modifier.fillMaxWidth().clip(AppTheme.shapes.sm).background(c.warningSoft).padding(Space.x3), horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
-                    PanelIcon(AppIcons.Info, tint = c.warning)
-                    AppText(order.notes, Modifier.weight(1f), style = AppTheme.type.bodySm)
-                }
+                PanelNotice(order.notes, title = "Nota del pedido", tone = Tone.WARNING)
             }
             AppDivider()
             Column(verticalArrangement = Arrangement.spacedBy(Space.x1)) {
@@ -286,12 +282,13 @@ private fun OrderDetailDialog(order: Order, busy: Boolean, onDismiss: () -> Unit
                 if (order.tipCents != 0L) KeyValueRow("Propina", formatMoney(order.tipCents))
                 KeyValueRow("Total", formatMoney(order.totalCents), strong = true)
                 order.payment?.let { p ->
-                    AppText("Pago: ${p.method.label()}", style = AppTheme.type.bodySm, color = c.inkSubtle)
+                    LabelText("Pago · ${p.method.label()}")
                 }
             }
 
             if (confirmRefund) {
-                Column(Modifier.fillMaxWidth().clip(AppTheme.shapes.md).background(c.dangerSoft).padding(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x3)) {
+                Column(Modifier.fillMaxWidth().flatSurface(AppTheme.controlFill, c.lineStrong, AppTheme.shapes.md).padding(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x3)) {
+                    LabelText("Reembolso", color = c.ink, dot = c.danger)
                     AppText("¿Reembolsar ${formatMoney(order.totalCents)} a ${order.customerText()}?", style = AppTheme.type.title)
                     AppText("El dinero regresa al método de pago original y el pedido queda como reembolsado.", style = AppTheme.type.bodySm, color = c.inkMuted)
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
@@ -314,7 +311,7 @@ private fun OrderDetailDialog(order: Order, busy: Boolean, onDismiss: () -> Unit
                 if (canRefund && !confirmRefund) AppButton("Reembolsar", onClick = { confirmRefund = true }, variant = ButtonVariant.DANGER)
                 if (canCancel) AppButton("Cancelar pedido", onClick = { onStatus(OrderStatus.CANCELLED) }, variant = ButtonVariant.DANGER, loading = busy)
                 Spacer(Modifier.weight(1f))
-                AppButton("Cerrar", onClick = onDismiss, variant = ButtonVariant.GHOST)
+                if (next == null) AppButton("Cerrar", onClick = onDismiss, variant = ButtonVariant.SECONDARY)
                 if (next != null) AppButton(next.second, onClick = { onStatus(next.first) }, loading = busy && !confirmRefund)
             }
         }

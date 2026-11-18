@@ -1,28 +1,31 @@
 package app.feature.diner
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -32,69 +35,88 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.shared.model.Menu
-import app.shared.model.MenuCategory
 import app.shared.model.MenuItem
 import app.shared.model.TenantPublic
 import app.shared.util.formatMoney
+import app.shared.util.nowMillis
 import app.ui.components.AddToCartButton
 import app.ui.components.AppButton
-import app.ui.components.AppDivider
 import app.ui.components.AppIconButton
 import app.ui.components.AppIcons
 import app.ui.components.AppText
-import app.ui.components.AppTextField
-import app.ui.components.BrandMark
+import app.ui.components.BottomBar
 import app.ui.components.ButtonSize
 import app.ui.components.ButtonVariant
-import app.ui.components.CategoryTabs
 import app.ui.components.DishImage
 import app.ui.components.EmptyState
-import app.ui.components.StatusPill
-import app.ui.components.TagBadge
-import app.ui.components.Tone
+import app.ui.components.LabelText
+import app.ui.components.StatusDot
+import app.ui.components.edgeBottom
+import app.ui.components.edgeTop
+import app.ui.components.flatSurface
+import app.ui.components.photoScrim
 import app.ui.components.pressable
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
 import app.ui.theme.Motion
+import app.ui.theme.Sizes
 import app.ui.theme.Space
-import app.ui.theme.ThemeController
 import app.ui.theme.WindowSize
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
-private const val KIND_HERO = 0
-private const val KIND_SEARCH = 1
-private const val KIND_TABS = 2
-private const val KIND_HEADER = 3
+private const val KIND_COVER = 0
+private const val KIND_NAV = 1
+private const val KIND_HEAD = 2
+private const val KIND_BENTO = 3
 private const val KIND_ITEMS = 4
 private const val KIND_EMPTY = 5
 private const val KIND_FOOTER = 6
 
-/** Índice fijo de la fila de pestañas dentro de la lista (portada = 0, búsqueda = 1). */
-private const val TABS_ROW_INDEX = 2
+/** Índice fijo de la fila pegada (buscar + categorías) dentro de la lista: la portada es el 0. */
+private const val NAV_INDEX = 1
+
+/** Lo que el resto de la primera pantalla necesita bajo la portada: fila pegada, encabezado, mosaico grande y barra. */
+private val CoverReserve = 528.dp
+private val CoverMin = 240.dp
+private val CoverMax = 316.dp
+
+/** Medidas del bento de la maqueta. */
+private val TileMediaLarge = 240.dp
+private val TileMediaSmall = 132.dp
+private val BentoWideHeight = 372.dp
+
+/** Compensación óptica del nombre a 40 px: el asta de la primera letra cae en el margen (−0.075em). */
+private val CoverNameInset = 3.dp
+
+/** Ancho mínimo del panel del menú para acomodar los platillos en dos columnas. */
+private val TwoColumnMin = 720.dp
 
 private class MenuRow(
     val kind: Int,
     val key: String,
-    val category: MenuCategory? = null,
+    val title: String = "",
+    val label: String = "",
     val items: List<MenuItem> = emptyList(),
-    val order: Int = 0,
+    /** Encabezado de una sección que no es la primera: lleva 32 de aire arriba. */
+    val topGap: Boolean = false,
+    val firstLine: Boolean = false,
+    val lastLine: Boolean = false,
 )
 
-private class MenuLayout(val rows: List<MenuRow>, val categories: List<MenuCategory>, val headerIndex: List<Int>)
+private class MenuLayout(val rows: List<MenuRow>, val tabs: List<String>, val headIndex: List<Int>)
 
 private fun normalize(text: String): String {
     val sb = StringBuilder()
@@ -109,15 +131,45 @@ private fun normalize(text: String): String {
     return sb.toString().trim()
 }
 
+private fun MenuItem.isPopular(): Boolean = tags.any { it.equals("popular", ignoreCase = true) }
+
+/**
+ * "Esta semana": el platillo insignia (el popular de mayor precio) en grande y dos populares más en chico,
+ * de categorías distintas cuando se puede. Con dos populares van los dos en chico; con uno, sólo el grande.
+ */
+private fun featuredItems(menu: Menu): List<MenuItem> {
+    val order = menu.categories.sortedBy { it.sortOrder }.map { it.id }
+    val popular = menu.items
+        .filter { it.available && it.isPopular() }
+        .sortedWith(compareBy({ order.indexOf(it.categoryId).let { i -> if (i < 0) Int.MAX_VALUE else i } }, { it.sortOrder }))
+    if (popular.size < 3) return popular
+    val lead = popular.maxByOrNull { it.priceCents } ?: return emptyList()
+    val rest = popular.filter { it.id != lead.id }
+    val picks = ArrayList<MenuItem>()
+    for (candidate in rest) {
+        if (picks.size < 2 && candidate.categoryId != lead.categoryId && picks.none { it.categoryId == candidate.categoryId }) picks.add(candidate)
+    }
+    for (candidate in rest) {
+        if (picks.size < 2 && picks.none { it.id == candidate.id }) picks.add(candidate)
+    }
+    return listOf(lead) + picks
+}
+
 private fun buildMenuLayout(menu: Menu, query: String, columns: Int): MenuLayout {
     val q = normalize(query)
     val rows = ArrayList<MenuRow>()
-    rows.add(MenuRow(KIND_HERO, "hero"))
-    rows.add(MenuRow(KIND_SEARCH, "search"))
-    rows.add(MenuRow(KIND_TABS, "tabs"))
-    val categories = ArrayList<MenuCategory>()
-    val headerIndex = ArrayList<Int>()
-    var order = 0
+    rows.add(MenuRow(KIND_COVER, "cover"))
+    rows.add(MenuRow(KIND_NAV, "nav"))
+    val tabs = ArrayList<String>()
+    val headIndex = ArrayList<Int>()
+
+    val featured = if (q.isEmpty()) featuredItems(menu) else emptyList()
+    if (featured.isNotEmpty()) {
+        headIndex.add(rows.size)
+        tabs.add("Destacados")
+        rows.add(MenuRow(KIND_HEAD, "head-featured", title = "Esta semana", label = "Selección de la casa"))
+        rows.add(MenuRow(KIND_BENTO, "bento", items = featured))
+    }
     for (category in menu.categories.sortedBy { it.sortOrder }) {
         val items = menu.items
             .filter { it.categoryId == category.id }
@@ -127,17 +179,25 @@ private fun buildMenuLayout(menu: Menu, query: String, columns: Int): MenuLayout
                     item.tags.any { normalize(it).contains(q) }
             }
         if (items.isEmpty()) continue
-        headerIndex.add(rows.size)
-        rows.add(MenuRow(KIND_HEADER, "cat-" + category.id, category = category, order = items.size))
-        categories.add(category)
-        items.chunked(columns).forEachIndexed { i, chunk ->
-            rows.add(MenuRow(KIND_ITEMS, "row-" + category.id + "-" + i, items = chunk, order = order))
-            order += chunk.size
+        val gap = headIndex.isNotEmpty()
+        headIndex.add(rows.size)
+        tabs.add(category.name)
+        rows.add(
+            MenuRow(
+                KIND_HEAD, "head-" + category.id,
+                title = category.name,
+                label = category.description.ifBlank { dishCount(items.size) },
+                topGap = gap,
+            ),
+        )
+        val lines = items.chunked(columns)
+        lines.forEachIndexed { i, line ->
+            rows.add(MenuRow(KIND_ITEMS, "row-" + category.id + "-" + i, items = line, firstLine = i == 0, lastLine = i == lines.lastIndex))
         }
     }
-    if (categories.isEmpty()) rows.add(MenuRow(KIND_EMPTY, "empty"))
+    if (tabs.isEmpty()) rows.add(MenuRow(KIND_EMPTY, "empty"))
     rows.add(MenuRow(KIND_FOOTER, "footer"))
-    return MenuLayout(rows, categories, headerIndex)
+    return MenuLayout(rows, tabs, headIndex)
 }
 
 /** Inicio del menú: lista con portada + (en escritorio) panel de pedido fijo a la derecha. */
@@ -150,7 +210,7 @@ fun MenuScreen(state: DinerState, tenant: TenantPublic, listState: LazyListState
             if (expanded) CartPanel(state, tenant, onPay)
         }
         if (!expanded) {
-            FloatingCartBar(state, Modifier.align(Alignment.BottomCenter)) { state.screen = DinerScreen.CART }
+            MenuOrderBar(state, Modifier.align(Alignment.BottomCenter)) { state.screen = DinerScreen.CART }
         }
     }
 }
@@ -159,61 +219,60 @@ fun MenuScreen(state: DinerState, tenant: TenantPublic, listState: LazyListState
 private fun MenuPane(state: DinerState, tenant: TenantPublic, listState: LazyListState, onExit: () -> Unit, modifier: Modifier = Modifier) {
     val windowSize = LocalWindowSize.current
     val compact = windowSize == WindowSize.COMPACT
-    val colors = AppTheme.colors
-    val isDark = colors.isDark
+    val expanded = windowSize == WindowSize.EXPANDED
+    val gutter = dinerGutter(compact)
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
     BoxWithConstraints(modifier) {
-        val columns = when (windowSize) {
-            WindowSize.COMPACT -> 1
-            WindowSize.MEDIUM -> 2
-            WindowSize.EXPANDED -> if (maxWidth >= 880.dp) 3 else 2
-        }
-        val pad = if (compact) Space.x4 else Space.x6
+        val columns = if (maxWidth >= TwoColumnMin) 2 else 1
+        val paneHeight = maxHeight
+        val coverHeight = (paneHeight - CoverReserve).coerceIn(CoverMin, CoverMax)
         val layout = remember(state.menu, state.query, columns) { buildMenuLayout(state.menu, state.query, columns) }
-        val tabNames = remember(layout) { layout.categories.map { it.name } }
-
-        val topBarPx = with(density) { TOP_BAR_HEIGHT.roundToPx() }
-        val defaultTabsPx = with(density) { 52.dp.roundToPx() }
-        var heroPx by remember { mutableStateOf(0) }
-        var tabsPx by remember { mutableStateOf(defaultTabsPx) }
+        var searching by remember { mutableStateOf(state.query.isNotBlank()) }
         var pendingTab by remember { mutableStateOf<Int?>(null) }
 
-        val barSolid by remember(listState, topBarPx) {
+        val navPx = with(density) { Sizes.bar.roundToPx() }
+        val sectionGapPx = with(density) { Space.x8.roundToPx() }
+        val spyLeadPx = with(density) { Space.x2.roundToPx() }
+
+        // La fila de buscar + categorías ya está pegada arriba: gana su filete.
+        val stuck by remember(listState) { derivedStateOf { listState.firstVisibleItemIndex >= NAV_INDEX } }
+        // El segmento activo sigue a la sección que se está leyendo: la última cuyo inicio ya pasó bajo la fila pegada.
+        val scrolledTab by remember(listState, layout, navPx) {
             derivedStateOf {
-                listState.firstVisibleItemIndex >= 1 ||
-                    (heroPx > 0 && listState.firstVisibleItemScrollOffset > heroPx - topBarPx * 2)
-            }
-        }
-        val tabsPinned by remember(listState, topBarPx) {
-            derivedStateOf {
-                if (listState.firstVisibleItemIndex >= TABS_ROW_INDEX) true
-                else listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == TABS_ROW_INDEX }?.let { it.offset <= topBarPx } ?: false
-            }
-        }
-        // Scroll-spy: la categoría cuyo encabezado ya pasó bajo la barra fija.
-        val scrolledTab by remember(listState, layout, topBarPx) {
-            derivedStateOf {
-                val threshold = topBarPx + tabsPx + 12
-                val anchor = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.offset + it.size > threshold }?.index
-                    ?: listState.firstVisibleItemIndex
-                var selected = 0
-                for (i in layout.headerIndex.indices) if (layout.headerIndex[i] <= anchor) selected = i
-                if (!listState.canScrollForward && listState.firstVisibleItemIndex > 0 && layout.headerIndex.isNotEmpty()) {
-                    selected = layout.headerIndex.size - 1
+                val heads = layout.headIndex
+                val first = listState.firstVisibleItemIndex
+                if (heads.isEmpty() || (first == 0 && listState.firstVisibleItemScrollOffset == 0)) {
+                    0
+                } else {
+                    val visible = listState.layoutInfo.visibleItemsInfo
+                    val line = navPx + spyLeadPx
+                    var selected = 0
+                    heads.forEachIndexed { k, headIndex ->
+                        val item = visible.firstOrNull { it.index == headIndex }
+                        val top = when {
+                            item != null -> item.offset + if (layout.rows[headIndex].topGap) sectionGapPx else 0
+                            headIndex < first -> Int.MIN_VALUE
+                            else -> Int.MAX_VALUE
+                        }
+                        if (top <= line) selected = k
+                    }
+                    if (!listState.canScrollForward) selected = heads.lastIndex
+                    selected
                 }
-                selected
             }
         }
-        val selectedTab = (pendingTab ?: scrolledTab).coerceIn(0, (layout.categories.size - 1).coerceAtLeast(0))
+        val selectedTab = (pendingTab ?: scrolledTab).coerceIn(0, (layout.tabs.size - 1).coerceAtLeast(0))
         val goToTab: (Int) -> Unit = { index ->
-            val target = layout.headerIndex.getOrNull(index)
+            val target = layout.headIndex.getOrNull(index)
             if (target != null) {
                 pendingTab = index
                 scope.launch {
                     try {
-                        listState.animateScrollToItem(target, -(topBarPx + tabsPx))
+                        // La sección queda justo debajo de la fila pegada (su aire superior se esconde tras ella).
+                        val gap = if (layout.rows[target].topGap) sectionGapPx else 0
+                        listState.animateScrollToItem(target, gap - navPx)
                     } finally {
                         pendingTab = null
                     }
@@ -222,279 +281,393 @@ private fun MenuPane(state: DinerState, tenant: TenantPublic, listState: LazyLis
         }
 
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-            items(count = layout.rows.size, key = { layout.rows[it].key }, contentType = { layout.rows[it].kind }) { index ->
-                val row = layout.rows[index]
-                when (row.kind) {
-                    KIND_HERO -> MenuHero(tenant, listState, compact, pad, Modifier.onSizeChanged { heroPx = it.height })
-                    KIND_SEARCH -> AppTextField(
-                        value = state.query,
-                        onValueChange = { state.query = it },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = pad).padding(top = Space.x2, bottom = Space.x3),
-                        placeholder = "Buscar platillos, ingredientes…",
-                        leadingIcon = AppIcons.Search,
-                    )
-                    KIND_TABS -> if (tabNames.isNotEmpty()) {
-                        CategoryTabs(
-                            tabs = tabNames,
+            layout.rows.forEach { row ->
+                if (row.kind == KIND_NAV) {
+                    stickyHeader(key = row.key, contentType = row.kind) { _ ->
+                        MenuNav(
+                            tabs = layout.tabs,
                             selectedIndex = selectedTab,
                             onSelect = goToTab,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = pad - Space.x2),
+                            searching = searching,
+                            query = state.query,
+                            onQueryChange = { state.query = it },
+                            onOpenSearch = {
+                                searching = true
+                                scope.launch { listState.animateScrollToItem(NAV_INDEX) }
+                            },
+                            onCloseSearch = {
+                                searching = false
+                                state.query = ""
+                            },
+                            stuck = stuck,
+                            gutter = gutter,
                         )
                     }
-                    KIND_HEADER -> CategoryHeader(row.category, row.order, pad)
-                    KIND_ITEMS -> Row(
-                        Modifier.fillMaxWidth().padding(horizontal = pad).padding(bottom = Space.x4),
-                        horizontalArrangement = Arrangement.spacedBy(Space.x4),
-                    ) {
-                        row.items.forEachIndexed { i, item ->
-                            DishCard(item, state, order = row.order + i, uniform = columns > 1, modifier = Modifier.weight(1f))
-                        }
-                        repeat(columns - row.items.size) { Spacer(Modifier.weight(1f)) }
-                    }
-                    KIND_EMPTY -> EmptyState(
-                        title = "Sin resultados",
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = pad, vertical = Space.x10),
-                        message = if (state.query.isBlank()) "Este menú aún no tiene platillos publicados." else "No encontramos platillos para “${state.query.trim()}”.",
-                        icon = AppIcons.Search,
-                        actionText = if (state.query.isBlank()) null else "Limpiar búsqueda",
-                        onAction = if (state.query.isBlank()) null else ({ state.query = "" }),
-                    )
-                    else -> MenuFooter(tenant, pad, bottomSpace = if (windowSize == WindowSize.EXPANDED) Space.x8 else 112.dp, onExit = onExit)
-                }
-            }
-        }
-
-        // Barra compacta + pestañas fijas (se superponen a la lista).
-        val barAlpha by animateFloatAsState(if (barSolid) 1f else 0f, tween(Motion.BASE, easing = Motion.standard), label = "bar-alpha")
-        Column(Modifier.fillMaxWidth()) {
-            Row(
-                Modifier.fillMaxWidth().background(colors.canvas.copy(alpha = barAlpha)).height(TOP_BAR_HEIGHT).padding(horizontal = pad),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Row(Modifier.weight(1f).graphicsLayer { alpha = barAlpha }, verticalAlignment = Alignment.CenterVertically) {
-                    BrandMark(tenant.name, tenant.theme.logoUrl, size = 32.dp)
-                    Spacer(Modifier.width(Space.x3))
-                    AppText(tenant.name, style = AppTheme.type.h3, maxLines = 1)
-                }
-                AppIconButton(
-                    icon = if (isDark) AppIcons.Sun else AppIcons.Moon,
-                    onClick = { ThemeController.toggle(isDark) },
-                    contentDescription = if (isDark) "Modo claro" else "Modo oscuro",
-                    filled = true,
-                )
-                Spacer(Modifier.width(Space.x2))
-                if (compact) {
-                    AppIconButton(
-                        icon = AppIcons.Receipt,
-                        onClick = { state.screen = DinerScreen.HISTORY },
-                        contentDescription = "Mis pedidos",
-                        filled = true,
-                        badge = state.history.size.takeIf { it > 0 },
-                    )
                 } else {
-                    AppButton(
-                        "Mis pedidos",
-                        onClick = { state.screen = DinerScreen.HISTORY },
-                        variant = ButtonVariant.SECONDARY,
-                        size = ButtonSize.SM,
-                        icon = AppIcons.Receipt,
-                    )
+                    item(key = row.key, contentType = row.kind) {
+                        when (row.kind) {
+                            KIND_COVER -> MenuCover(tenant, state, coverHeight, gutter, compact)
+                            KIND_HEAD -> SectionHead(
+                                title = row.title,
+                                modifier = Modifier.padding(horizontal = gutter).padding(top = if (row.topGap) Space.x8 else 0.dp),
+                                label = row.label,
+                            )
+                            KIND_BENTO -> Bento(row.items, state, gutter, wide = columns > 1)
+                            KIND_ITEMS -> DishLine(row, state, columns, gutter)
+                            KIND_EMPTY -> EmptyState(
+                                title = "Sin resultados",
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = gutter, vertical = Space.x6),
+                                message = if (state.query.isBlank()) "Este menú aún no tiene platillos publicados." else "No encontramos platillos para “${state.query.trim()}”.",
+                                icon = AppIcons.Search,
+                                actionText = if (state.query.isBlank()) null else "Limpiar búsqueda",
+                                onAction = if (state.query.isBlank()) null else ({ state.query = "" }),
+                            )
+                            else -> MenuFooter(
+                                tenant = tenant,
+                                state = state,
+                                gutter = gutter,
+                                // barra inferior + aire; en escritorio no hay barra
+                                bottomSpace = if (expanded) Space.x8 else Sizes.bar + Space.x6,
+                                // Buscando, el pie llena lo que falte: aunque haya pocos resultados la fila de búsqueda sigue pegada arriba.
+                                minHeight = if (searching) paneHeight - Sizes.bar else 0.dp,
+                                onExit = onExit,
+                            )
+                        }
+                    }
                 }
-            }
-            if (tabsPinned && tabNames.isNotEmpty()) {
-                Column(Modifier.fillMaxWidth().background(colors.canvas).onSizeChanged { if (it.height > 0) tabsPx = it.height }) {
-                    CategoryTabs(
-                        tabs = tabNames,
-                        selectedIndex = selectedTab,
-                        onSelect = goToTab,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = pad - Space.x2),
-                    )
-                    AppDivider()
-                }
-            } else if (barSolid) {
-                AppDivider(Modifier.graphicsLayer { alpha = barAlpha })
             }
         }
     }
 }
 
+// ───────────────────────── Portada + identidad ─────────────────────────
+
+/** Día de la semana (1 = lunes … 7 = domingo) en la hora del centro de México (UTC−6, sin horario de verano). */
+private fun weekdayInMexico(nowMs: Long): Int {
+    val dayMs = 86_400_000L
+    val local = nowMs - 6 * 3_600_000L
+    val days = if (local >= 0) local / dayMs else (local - dayMs + 1) / dayMs
+    // El 1 de enero de 1970 fue jueves.
+    return (((days + 3) % 7 + 7) % 7).toInt() + 1
+}
+
+/** "Abierto · cierra 23:00" / "Cerrado · abre 13:00": el estado en tinta, la hora en mono. */
 @Composable
-private fun MenuHero(tenant: TenantPublic, listState: LazyListState, compact: Boolean, pad: Dp, modifier: Modifier = Modifier) {
+private fun openingFact(tenant: TenantPublic): AnnotatedString {
     val colors = AppTheme.colors
-    Column(modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().height(if (compact) 288.dp else 348.dp).clipToBounds()) {
+    val mono = AppTheme.type.mono
+    val today = remember(tenant.hours) { tenant.hours.firstOrNull { it.day == weekdayInMexico(nowMillis()) } }
+    val strong = SpanStyle(color = colors.ink, fontWeight = FontWeight.Medium)
+    val figure = SpanStyle(color = colors.ink, fontFamily = mono.fontFamily, fontWeight = mono.fontWeight, letterSpacing = mono.letterSpacing)
+    return buildAnnotatedString {
+        withStyle(strong) { append(if (tenant.isOpen) "Abierto" else "Cerrado") }
+        val hour = if (tenant.isOpen) today?.close else today?.open
+        if (!hour.isNullOrBlank()) {
+            append(if (tenant.isOpen) " · cierra " else " · abre ")
+            withStyle(figure) { append(hour) }
+        }
+    }
+}
+
+/** Cifra en mono + unidad en sans ("25–35 min", "4.8 / 5"). */
+@Composable
+private fun figureFact(figure: String, unit: String): AnnotatedString {
+    val colors = AppTheme.colors
+    val mono = AppTheme.type.mono
+    return buildAnnotatedString {
+        withStyle(SpanStyle(color = colors.ink, fontFamily = mono.fontFamily, fontWeight = mono.fontWeight, letterSpacing = mono.letterSpacing)) { append(figure) }
+        append(unit)
+    }
+}
+
+@Composable
+private fun Fact(text: AnnotatedString, modifier: Modifier = Modifier) {
+    BasicText(
+        text = text,
+        modifier = modifier,
+        style = AppTheme.type.bodySm.copy(color = AppTheme.colors.inkMuted),
+        overflow = TextOverflow.Ellipsis,
+        softWrap = false,
+        maxLines = 1,
+    )
+}
+
+/**
+ * Portada: la foto es la atmósfera y la identidad va encima, sobre el velo — antetítulo en mono, nombre 40/44,
+ * un filete y la ficha de datos (estado · tiempo · calificación) de margen a margen. La imagen se apaga en el
+ * fondo en vez de cortarse. Sin foto de portada, la identidad va sola sobre el fondo.
+ */
+@Composable
+private fun MenuCover(tenant: TenantPublic, state: DinerState, height: Dp, gutter: Dp, compact: Boolean) {
+    val colors = AppTheme.colors
+    val cover = tenant.theme.coverUrl
+    val hasPhoto = !cover.isNullOrBlank()
+    Box(if (hasPhoto) Modifier.fillMaxWidth().height(height) else Modifier.fillMaxWidth().padding(top = Space.x18)) {
+        if (hasPhoto) {
+            val frame = framingFor(cover, if (compact) PhotoUse.COVER else PhotoUse.COVER_WIDE)
             DishImage(
-                tenant.theme.coverUrl,
-                modifier = Modifier.fillMaxSize().graphicsLayer {
-                    // Parallax suave: la foto baja más lento que el contenido y crece un poco.
-                    val offset = if (listState.firstVisibleItemIndex == 0) listState.firstVisibleItemScrollOffset.toFloat() else 0f
-                    translationY = offset * 0.42f
-                    val s = 1.04f + (offset / size.height.coerceAtLeast(1f)).coerceIn(0f, 1f) * 0.10f
-                    scaleX = s
-                    scaleY = s
-                },
+                cover,
+                modifier = Modifier.matchParentSize().photoScrim(colors.canvas),
                 contentDescription = null,
                 shape = RectangleShape,
+                ring = false,
+                alignment = frame.alignment,
+                zoom = frame.zoom,
             )
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(
-                        0f to PhotoScrim.copy(alpha = 0.38f),
-                        0.42f to PhotoScrim.copy(alpha = 0.04f),
-                        1f to PhotoScrim.copy(alpha = 0.80f),
-                    ),
-                ),
-            )
+        }
+        Column(Modifier.align(Alignment.BottomStart).widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = gutter)) {
+            if (tenant.tagline.isNotBlank()) {
+                LabelText(tenant.tagline, color = colors.inkMuted)
+                Spacer(Modifier.height(Space.x1))
+            }
+            AppText(tenant.name, modifier = Modifier.offset(x = -CoverNameInset), style = AppTheme.type.display, maxLines = 2)
+            Spacer(Modifier.height(Space.x3))
             Row(
-                Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = pad, vertical = Space.x5),
+                Modifier.fillMaxWidth().edgeTop(colors.line).padding(top = Space.x3),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BrandMark(tenant.name, tenant.theme.logoUrl, size = if (compact) 52.dp else 64.dp)
-                Spacer(Modifier.width(Space.x4))
-                Column(Modifier.weight(1f)) {
-                    AppText(tenant.name, style = if (compact) AppTheme.type.h1 else AppTheme.type.display, color = OnPhoto, maxLines = 2)
-                    if (tenant.tagline.isNotBlank()) {
-                        AppText(tenant.tagline, style = AppTheme.type.body, color = OnPhoto.copy(alpha = 0.86f), maxLines = 2)
-                    }
+                Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
+                    StatusDot(if (tenant.isOpen) colors.positive else colors.inkSubtle)
+                    Spacer(Modifier.width(Space.x2))
+                    Fact(openingFact(tenant))
                 }
+                Spacer(Modifier.width(Space.x3))
+                Fact(figureFact("${tenant.etaMinutes}–${tenant.etaMinutes + 10}", " min"))
+                Spacer(Modifier.width(Space.x3))
+                Fact(figureFact(((tenant.rating * 10).roundToInt() / 10.0).toString(), " / 5"))
             }
         }
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = pad).padding(top = Space.x4, bottom = Space.x2),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Space.x4),
-        ) {
-            val rating = ((tenant.rating * 10).roundToInt() / 10.0).toString()
-            InfoStat(AppIcons.Star, rating, colors.warning)
-            InfoStat(AppIcons.Clock, "${tenant.etaMinutes}–${tenant.etaMinutes + 10} min", colors.inkMuted)
-            StatusPill(if (tenant.isOpen) "Abierto" else "Cerrado", tone = if (tenant.isOpen) Tone.SUCCESS else Tone.DANGER)
-            if (tenant.cuisine.isNotBlank()) AppText(tenant.cuisine, style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 1)
-        }
-        if (!compact && tenant.description.isNotBlank()) {
-            AppText(
-                tenant.description,
-                modifier = Modifier.padding(horizontal = pad).padding(bottom = Space.x2).widthIn(max = 640.dp),
-                style = AppTheme.type.body,
-                color = colors.inkMuted,
-                maxLines = 2,
+        // Mis pedidos: aparece sobre la portada en cuanto hay un pedido en esta visita.
+        if (state.history.isNotEmpty()) {
+            AppIconButton(
+                icon = AppIcons.Receipt,
+                onClick = { state.screen = DinerScreen.HISTORY },
+                modifier = Modifier.align(Alignment.TopEnd).padding(gutter),
+                contentDescription = "Mis pedidos",
+                filled = true,
+                badge = state.history.size,
             )
         }
     }
 }
 
+// ───────────────────────── Bento destacado ─────────────────────────
+
+/** Uno grande, dos chicos. En pantallas anchas el grande va a la izquierda y los chicos apilados a la derecha. */
 @Composable
-private fun InfoStat(icon: ImageVector, text: String, tint: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        DinerIcon(icon, tint = tint, size = 18.dp)
-        Spacer(Modifier.width(Space.x1))
-        AppText(text, style = AppTheme.type.title, maxLines = 1)
+private fun Bento(items: List<MenuItem>, state: DinerState, gutter: Dp, wide: Boolean) {
+    val lead = if (items.size == 2) null else items.firstOrNull()
+    val small = if (items.size == 2) items else items.drop(1)
+    if (wide && lead != null && small.size == 2) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = gutter).height(BentoWideHeight),
+            horizontalArrangement = Arrangement.spacedBy(Space.x2),
+        ) {
+            FeatureTile(lead, state, large = true, mediaHeight = null, modifier = Modifier.weight(2f).fillMaxHeight())
+            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(Space.x2)) {
+                small.forEach { FeatureTile(it, state, large = false, mediaHeight = null, modifier = Modifier.weight(1f).fillMaxWidth()) }
+            }
+        }
+    } else {
+        Column(Modifier.fillMaxWidth().padding(horizontal = gutter), verticalArrangement = Arrangement.spacedBy(Space.x2)) {
+            if (lead != null) FeatureTile(lead, state, large = true, mediaHeight = TileMediaLarge, modifier = Modifier.fillMaxWidth())
+            if (small.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                    small.forEach { FeatureTile(it, state, large = false, mediaHeight = TileMediaSmall, modifier = Modifier.weight(1f).fillMaxHeight()) }
+                }
+            }
+        }
     }
 }
 
+/**
+ * Mosaico con foto: superficie 1 con filete de foto y radio 16; la foto a sangre arriba y el pie (margen 12)
+ * separado por un filete. Grande: nombre 16/20 con el precio en mono 16 en el mismo renglón y la descripción
+ * debajo. Chico: nombre 15/20 y el precio en mono al fondo. [mediaHeight] nulo: la foto toma el alto que sobra.
+ */
 @Composable
-private fun CategoryHeader(category: MenuCategory?, count: Int, pad: Dp) {
-    if (category == null) return
-    Column(Modifier.fillMaxWidth().padding(horizontal = pad).padding(top = Space.x6, bottom = Space.x4)) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            AppText(category.name, modifier = Modifier.weight(1f), style = AppTheme.type.h2, maxLines = 1)
-            AppText(if (count == 1) "1 platillo" else "$count platillos", style = AppTheme.type.label, color = AppTheme.colors.inkSubtle)
-        }
-        if (category.description.isNotBlank()) {
-            Spacer(Modifier.height(Space.x1))
-            AppText(category.description, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 2)
-        }
-    }
-}
-
-/** Tarjeta grande de platillo: foto 16:10 con etiquetas, nombre, descripción, precio y botón de agregar. */
-@Composable
-private fun DishCard(item: MenuItem, state: DinerState, order: Int, uniform: Boolean, modifier: Modifier = Modifier) {
+private fun FeatureTile(item: MenuItem, state: DinerState, large: Boolean, mediaHeight: Dp?, modifier: Modifier = Modifier) {
     val colors = AppTheme.colors
-    val shape = AppTheme.shapes.lg
-    val scope = rememberCoroutineScope()
-    val pulse = remember { Animatable(1f) }
-    val quantity = state.quantityOf(item.id)
+    val frame = framingFor(item.imageUrl, if (large) PhotoUse.TILE_LARGE else PhotoUse.TILE_SMALL)
     Column(
         modifier
-            .staggerIn(order, state.loadedAt)
-            .graphicsLayer { scaleX = pulse.value; scaleY = pulse.value }
-            .clip(shape)
-            .background(colors.surface)
-            .border(1.dp, colors.line, shape)
-            .pressable(scale = 0.985f) { state.openSheet(item) },
+            .pressable(scale = 0.99f) { state.openSheet(item) }
+            .flatSurface(colors.surface, colors.lineStrong, AppTheme.shapes.lg),
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f)) {
-            DishImage(
-                item.imageUrl,
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (item.available) 1f else 0.45f },
-                contentDescription = item.name,
-                shape = RectangleShape,
-            )
-            if (item.tags.isNotEmpty()) {
-                Row(
-                    Modifier.align(Alignment.TopStart).padding(Space.x3),
-                    horizontalArrangement = Arrangement.spacedBy(Space.x1),
-                ) {
-                    item.tags.take(if (uniform) 2 else 3).forEach { tag -> TagBadge(tagLabel(tag), tone = tagTone(tag)) }
+        DishImage(
+            item.imageUrl,
+            modifier = (if (mediaHeight != null) Modifier.height(mediaHeight) else Modifier.weight(1f)).fillMaxWidth(),
+            contentDescription = item.name,
+            shape = RectangleShape,
+            ring = false,
+            alignment = frame.alignment,
+            zoom = frame.zoom,
+        )
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .then(if (mediaHeight != null && !large) Modifier.weight(1f) else Modifier)
+                .edgeTop(colors.line)
+                .padding(Space.x3),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            if (large) {
+                Row(Modifier.fillMaxWidth()) {
+                    AppText(item.name, modifier = Modifier.weight(1f).alignByBaseline(), style = AppTheme.type.title, maxLines = 2)
+                    AppText(
+                        formatMoney(item.priceCents),
+                        modifier = Modifier.padding(start = Space.x3).alignByBaseline(),
+                        style = AppTheme.type.monoMd,
+                        maxLines = 1,
+                    )
                 }
-            }
-            if (!item.available) {
-                StatusPill("Agotado", modifier = Modifier.align(Alignment.Center), tone = Tone.NEUTRAL, dot = false)
+                if (item.description.isNotBlank()) {
+                    AppText(item.description, style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 1)
+                }
+            } else {
+                AppText(item.name, style = AppTheme.type.titleSm, maxLines = 2)
+                AppText(formatMoney(item.priceCents), style = AppTheme.type.mono, maxLines = 1)
             }
         }
-        Column(Modifier.fillMaxWidth().padding(Space.x4).graphicsLayer { alpha = if (item.available) 1f else 0.55f }) {
-            AppText(item.name, style = AppTheme.type.title, maxLines = if (uniform) 1 else 2)
-            Spacer(Modifier.height(Space.x1))
-            Box(if (uniform) Modifier.fillMaxWidth().height(38.dp) else Modifier.fillMaxWidth()) {
-                AppText(item.description, style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 2)
+    }
+}
+
+// ───────────────────────── Filas de platillo ─────────────────────────
+
+/** Un renglón de la lista: una fila en teléfono, dos en pantallas anchas (misma altura, mismos filetes). */
+@Composable
+private fun DishLine(row: MenuRow, state: DinerState, columns: Int, gutter: Dp) {
+    if (columns <= 1) {
+        val item = row.items.firstOrNull() ?: return
+        DishRow(item, state, first = row.firstLine, last = row.lastLine, modifier = Modifier.fillMaxWidth().padding(horizontal = gutter))
+    } else {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = gutter).height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(Space.x6),
+        ) {
+            row.items.forEach { item ->
+                DishRow(item, state, first = row.firstLine, last = row.lastLine, modifier = Modifier.weight(1f).fillMaxHeight())
             }
-            Spacer(Modifier.height(Space.x3))
-            Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
-                AppText(formatMoney(item.priceCents), modifier = Modifier.weight(1f), style = AppTheme.type.h3, maxLines = 1)
+            repeat(columns - row.items.size) { Spacer(Modifier.weight(1f)) }
+        }
+    }
+}
+
+/**
+ * Fila de platillo: miniatura de 80 en macro · arriba el texto (la altura de mayúsculas del nombre coincide
+ * con el borde de la foto) · abajo, en una franja de 32, el precio en mono y el control. Toda la fila abre
+ * el platillo; el control agrega directo, o abre el platillo si hay que elegir algo.
+ */
+@Composable
+private fun DishRow(item: MenuItem, state: DinerState, first: Boolean, last: Boolean, modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
+    val quantity = state.quantityOf(item.id)
+    val frame = framingFor(item.imageUrl, PhotoUse.THUMB)
+    Row(
+        modifier
+            .then(if (first) Modifier.edgeTop(colors.line) else Modifier)
+            .then(if (last) Modifier else Modifier.edgeBottom(colors.line))
+            .pressable(scale = 1f) { state.openSheet(item) }
+            .padding(top = Space.x3, bottom = if (last) 0.dp else Space.x3),
+    ) {
+        DishImage(
+            item.imageUrl,
+            modifier = Modifier.size(Sizes.thumb).alpha(if (item.available) 1f else 0.4f),
+            contentDescription = null,
+            alignment = frame.alignment,
+            zoom = frame.zoom,
+        )
+        Spacer(Modifier.width(Space.x3))
+        Column(Modifier.weight(1f).heightIn(min = Sizes.thumb), verticalArrangement = Arrangement.SpaceBetween) {
+            Column(Modifier.fillMaxWidth().pullUp(Space.x1)) {
+                AppText(item.name, style = AppTheme.type.title, color = if (item.available) colors.ink else colors.inkMuted, maxLines = 2)
+                if (item.description.isNotBlank()) {
+                    AppText(item.description, style = AppTheme.type.bodySm, color = if (item.available) colors.inkMuted else colors.inkSubtle, maxLines = 2)
+                }
+            }
+            Row(Modifier.fillMaxWidth().height(Sizes.controlSm), verticalAlignment = Alignment.CenterVertically) {
+                AppText(
+                    formatMoney(item.priceCents),
+                    modifier = Modifier.weight(1f),
+                    style = AppTheme.type.mono,
+                    color = if (item.available) colors.ink else colors.inkSubtle,
+                    maxLines = 1,
+                )
                 if (item.available) {
                     AddToCartButton(
                         quantity = quantity,
-                        onAdd = {
-                            if (state.requiresChoice(item)) {
-                                state.openSheet(item)
-                            } else {
-                                state.add(item)
-                                scope.launch {
-                                    pulse.snapTo(0.965f)
-                                    pulse.animateTo(1f, Motion.bouncy())
-                                }
-                            }
-                        },
+                        onAdd = { if (state.requiresChoice(item)) state.openSheet(item) else state.add(item) },
                         onRemove = { state.removeOne(item.id) },
                     )
                 } else {
-                    AppText("Agotado", style = AppTheme.type.label, color = colors.inkSubtle)
+                    LabelText("Agotado")
                 }
             }
         }
     }
 }
 
+// ───────────────────────── Pie de página ─────────────────────────
+
 @Composable
-private fun MenuFooter(tenant: TenantPublic, pad: Dp, bottomSpace: Dp, onExit: () -> Unit) {
+private fun MenuFooter(tenant: TenantPublic, state: DinerState, gutter: Dp, bottomSpace: Dp, minHeight: Dp, onExit: () -> Unit) {
     val colors = AppTheme.colors
-    Column(
-        Modifier.fillMaxWidth().padding(horizontal = pad).padding(top = Space.x8, bottom = bottomSpace),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        AppDivider()
-        Spacer(Modifier.height(Space.x6))
-        BrandMark(tenant.name, tenant.theme.logoUrl, size = 36.dp)
-        Spacer(Modifier.height(Space.x2))
-        AppText(tenant.name, style = AppTheme.type.title, textAlign = TextAlign.Center)
-        if (tenant.address.isNotBlank()) {
-            AppText(tenant.address, style = AppTheme.type.bodySm, color = colors.inkMuted, textAlign = TextAlign.Center)
+    Column(Modifier.fillMaxWidth().heightIn(min = minHeight).padding(start = gutter, end = gutter, top = Space.x8, bottom = bottomSpace)) {
+        AppText(
+            if (tenant.currency == "MXN") "Precios en pesos mexicanos. IVA incluido." else "Precios en ${tenant.currency}. Impuestos incluidos.",
+            style = AppTheme.type.bodySm,
+            color = colors.inkSubtle,
+        )
+        Spacer(Modifier.height(Space.x8))
+        Column(Modifier.fillMaxWidth().edgeTop(colors.line).padding(top = Space.x4)) {
+            LabelText(tenant.name)
+            if (tenant.address.isNotBlank()) {
+                Spacer(Modifier.height(Space.x1))
+                AppText(tenant.address, style = AppTheme.type.bodySm, color = colors.inkMuted)
+            }
+            if (tenant.phone.isNotBlank()) {
+                AppText(tenant.phone, style = AppTheme.type.mono, color = colors.inkMuted, maxLines = 1)
+            }
+            Spacer(Modifier.height(Space.x4))
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                AppButton(
+                    "Mis pedidos",
+                    onClick = { state.screen = DinerScreen.HISTORY },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    icon = AppIcons.Receipt,
+                )
+                // Salida discreta (vuelve al índice de la demo / app anfitriona).
+                AppButton("Salir del menú", onClick = onExit, variant = ButtonVariant.GHOST, size = ButtonSize.SM)
+            }
         }
-        if (tenant.phone.isNotBlank()) {
-            AppText(tenant.phone, style = AppTheme.type.bodySm, color = colors.inkMuted, textAlign = TextAlign.Center)
-        }
-        Spacer(Modifier.height(Space.x3))
-        // Salida discreta (vuelve al índice de la demo / app anfitriona).
-        AppButton("Salir del menú", onClick = onExit, variant = ButtonVariant.GHOST, size = ButtonSize.SM)
     }
 }
+
+// ───────────────────────── Barra inferior ─────────────────────────
+
+/**
+ * Barra del menú (teléfono y tablet): sólida, con filete. A la izquierda "N PLATILLOS" en mono sobre la suma
+ * de los platillos en mono 20/24; a la derecha la brasa: "Ver pedido →". Sólo existe cuando hay algo en el pedido.
+ */
+@Composable
+fun MenuOrderBar(state: DinerState, modifier: Modifier = Modifier, onOpen: () -> Unit) {
+    AnimatedVisibility(
+        visible = state.itemCount > 0,
+        modifier = modifier,
+        enter = slideInVertically(tween(Motion.BASE, easing = Motion.standard)) { it } + fadeIn(tween(Motion.FAST)),
+        exit = slideOutVertically(tween(Motion.BASE, easing = Motion.exit)) { it } + fadeOut(tween(Motion.BASE)),
+    ) {
+        BottomBar {
+            Column(Modifier.width(BarSummaryWidth)) {
+                LabelText(dishCount(state.itemCount))
+                AnimatedMoney(state.subtotalCents, style = AppTheme.type.monoLg)
+            }
+            AppButton("Ver pedido", onClick = onOpen, modifier = Modifier.weight(1f), trailingIcon = AppIcons.Forward)
+        }
+    }
+}
+
+/** Ancho del bloque izquierdo de la barra inferior (resumen o stepper grande). */
+internal val BarSummaryWidth = 120.dp

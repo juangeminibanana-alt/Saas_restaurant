@@ -1,9 +1,11 @@
 package app.feature.panel
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -17,8 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.shared.model.IntegrationProvider
+import app.shared.model.Role
 import app.shared.model.UserSession
 import app.shared.util.formatMoney
 import app.shared.util.label
@@ -35,6 +39,7 @@ import app.ui.components.ButtonSize
 import app.ui.components.ButtonVariant
 import app.ui.components.EmptyState
 import app.ui.components.ErrorState
+import app.ui.components.LabelText
 import app.ui.components.PageHeader
 import app.ui.components.SectionHeader
 import app.ui.components.StatCard
@@ -71,19 +76,19 @@ internal fun OverviewSection(session: UserSession, onOpenOrders: () -> Unit) {
             is Load.Ready -> {
                 val v = s.value
                 val series = v.salesSeries.map { it.value }
-                SimpleGrid(items = listOf(0, 1, 2, 3), columns = columns) { i ->
+                SimpleGrid(items = listOf(0, 1, 2, 3), columns = columns, equalHeight = true) { i ->
                     when (i) {
-                        0 -> StatCard("Ventas de hoy", formatMoney(v.salesTodayCents), Modifier.fillMaxWidth(), icon = AppIcons.Cash, series = series)
-                        1 -> StatCard("Pedidos de hoy", v.ordersToday.toString(), Modifier.fillMaxWidth(), icon = AppIcons.Receipt)
-                        2 -> StatCard("Ticket promedio", formatMoney(v.avgTicketCents), Modifier.fillMaxWidth(), icon = AppIcons.Tag)
-                        else -> StatCard("Tiempo de preparación", "${v.avgPrepMinutes} min", Modifier.fillMaxWidth(), icon = AppIcons.Clock)
+                        // Etiquetas cortas: caben enteras en media pantalla de teléfono.
+                        0 -> StatCard("Ventas hoy", formatMoney(v.salesTodayCents), Modifier.fillMaxSize(), series = series)
+                        1 -> StatCard("Pedidos hoy", v.ordersToday.toString(), Modifier.fillMaxSize())
+                        2 -> StatCard("Ticket medio", formatMoney(v.avgTicketCents), Modifier.fillMaxSize())
+                        else -> StatCard("Preparación", "${v.avgPrepMinutes} min", Modifier.fillMaxSize())
                     }
                 }
-                Spacer(Modifier.height(Space.x5))
-                SimpleGrid(items = listOf(0, 1), columns = if (size == WindowSize.EXPANDED) 2 else 1) { i ->
+                SimpleGrid(items = listOf(0, 1), columns = if (size == WindowSize.EXPANDED) 2 else 1, equalHeight = true) { i ->
                     if (i == 0) {
-                        AppCard(Modifier.fillMaxWidth(), padding = Space.x5) {
-                            AppText("Ventas de los últimos días", style = AppTheme.type.title)
+                        AppCard(Modifier.fillMaxSize(), padding = Space.x4) {
+                            SectionHeader("Ventas", label = "Últimos días")
                             Spacer(Modifier.height(Space.x4))
                             if (v.salesSeries.isEmpty()) {
                                 AppText("Aún no hay ventas registradas.", color = colors.inkMuted)
@@ -92,20 +97,19 @@ internal fun OverviewSection(session: UserSession, onOpenOrders: () -> Unit) {
                             }
                         }
                     } else {
-                        AppCard(Modifier.fillMaxWidth(), padding = Space.x5) {
-                            AppText("Lo más pedido", style = AppTheme.type.title)
-                            Spacer(Modifier.height(Space.x3))
+                        AppCard(Modifier.fillMaxSize(), padding = Space.x4) {
+                            SectionHeader("Lo más pedido", label = "Vendidos · ingreso")
+                            Spacer(Modifier.height(Space.x2))
                             if (v.topItems.isEmpty()) {
                                 AppText("Aquí verás tus platillos más vendidos.", color = colors.inkMuted)
                             }
                             v.topItems.take(6).forEachIndexed { index, item ->
                                 if (index > 0) AppDivider()
                                 Row(Modifier.fillMaxWidth().padding(vertical = Space.x3), verticalAlignment = Alignment.CenterVertically) {
-                                    AppText("${index + 1}", Modifier.width(28.dp), style = AppTheme.type.title, color = colors.inkSubtle)
-                                    AppText(item.name, Modifier.weight(1f), maxLines = 1)
-                                    AppText("${item.quantity} vendidos", style = AppTheme.type.bodySm, color = colors.inkMuted)
-                                    Spacer(Modifier.width(Space.x4))
-                                    AppText(formatMoney(item.revenueCents), style = AppTheme.type.title)
+                                    AppText((index + 1).toString().padStart(2, '0'), Modifier.width(Space.x8), style = AppTheme.type.mono, color = colors.inkSubtle)
+                                    AppText(item.name, Modifier.weight(1f), style = AppTheme.type.title, maxLines = 1)
+                                    AppText(item.quantity.toString(), style = AppTheme.type.mono, color = colors.inkMuted, maxLines = 1)
+                                    AppText(formatMoney(item.revenueCents), Modifier.width(Space.x18 + Space.x2), style = AppTheme.type.mono, textAlign = TextAlign.End, maxLines = 1)
                                 }
                             }
                         }
@@ -114,12 +118,11 @@ internal fun OverviewSection(session: UserSession, onOpenOrders: () -> Unit) {
             }
         }
 
-        Spacer(Modifier.height(Space.x5))
-        AppCard(Modifier.fillMaxWidth(), padding = Space.x5) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AppText("Pedidos en curso", Modifier.weight(1f), style = AppTheme.type.title)
-                AppButton("Ver todos", onClick = onOpenOrders, variant = ButtonVariant.GHOST, size = ButtonSize.SM)
-            }
+        AppCard(Modifier.fillMaxWidth(), padding = Space.x4) {
+            SectionHeader(
+                "Pedidos en curso",
+                action = { AppButton("Ver todos", onClick = onOpenOrders, variant = ButtonVariant.SECONDARY, size = ButtonSize.SM, trailingIcon = AppIcons.Forward) },
+            )
             Spacer(Modifier.height(Space.x2))
             when (val s = active.state) {
                 is Load.Loading -> SkeletonRows(3)
@@ -131,20 +134,21 @@ internal fun OverviewSection(session: UserSession, onOpenOrders: () -> Unit) {
                     s.value.take(5).forEachIndexed { index, order ->
                         if (index > 0) AppDivider()
                         Row(Modifier.fillMaxWidth().padding(vertical = Space.x3), verticalAlignment = Alignment.CenterVertically) {
-                            AppText(order.number, Modifier.width(72.dp), style = AppTheme.type.title)
+                            AppText(order.number, Modifier.width(Space.x14), style = AppTheme.type.mono, maxLines = 1)
                             Column(Modifier.weight(1f)) {
-                                AppText(order.customerName.ifBlank { order.type.label() }, maxLines = 1)
+                                AppText(order.customerName.ifBlank { order.type.label() }, style = AppTheme.type.title, maxLines = 1)
                                 AppText("${order.type.label()} · ${order.channel.label()}", style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 1)
                             }
-                            StatusPill(order.status.label(), tone = order.status.tone())
-                            Spacer(Modifier.width(Space.x4))
-                            AppText(formatMoney(order.totalCents), style = AppTheme.type.title)
+                            Spacer(Modifier.width(Space.x2))
+                            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Space.x1)) {
+                                AppText(formatMoney(order.totalCents), style = AppTheme.type.mono, maxLines = 1)
+                                StatusPill(order.status.label(), tone = order.status.tone())
+                            }
                         }
                     }
                 }
             }
         }
-        Spacer(Modifier.height(Space.x8))
     }
 }
 
@@ -180,26 +184,27 @@ internal fun IntegrationsSection() {
                     EmptyState("Sin integraciones disponibles", message = "Pronto podrás conectar más servicios.", icon = AppIcons.Plug)
                 }
                 s.value.groupBy { it.category.ifBlank { "Otros" } }.forEach { (category, list) ->
-                    SectionHeader(category)
-                    Spacer(Modifier.height(Space.x3))
-                    Column(verticalArrangement = Arrangement.spacedBy(Space.x3)) {
-                        list.forEach { integration ->
-                            AppCard(Modifier.fillMaxWidth(), padding = Space.x5) {
+                    SectionHeader(category, modifier = Modifier.padding(top = Space.x3), label = "${list.count { it.connected }} de ${list.size} activas")
+                    // Un solo bloque por categoría: filas separadas por filetes.
+                    AppCard(Modifier.fillMaxWidth(), padding = 0.dp) {
+                        list.forEachIndexed { rowIndex, integration ->
+                            if (rowIndex > 0) AppDivider()
+                            Box(Modifier.fillMaxWidth().padding(Space.x4)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconBadge(integration.provider.icon(), tone = if (integration.connected) Tone.SUCCESS else Tone.NEUTRAL)
-                                    Spacer(Modifier.width(Space.x4))
+                                    IconBadge(integration.provider.icon())
+                                    Spacer(Modifier.width(Space.x3))
                                     Column(Modifier.weight(1f)) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            AppText(integration.name, style = AppTheme.type.title)
+                                            AppText(integration.name, Modifier.weight(1f, fill = false), style = AppTheme.type.title, maxLines = 1)
                                             Spacer(Modifier.width(Space.x2))
-                                            TagBadge(modeLabel(integration.mode), tone = if (integration.mode == "live") Tone.SUCCESS else Tone.WARNING)
+                                            TagBadge(modeLabel(integration.mode))
                                         }
                                         if (integration.description.isNotBlank()) {
                                             Spacer(Modifier.height(Space.x1))
                                             AppText(integration.description, style = AppTheme.type.bodySm, color = colors.inkMuted)
                                         }
                                     }
-                                    Spacer(Modifier.width(Space.x4))
+                                    Spacer(Modifier.width(Space.x3))
                                     AppSwitch(
                                         checked = integration.connected,
                                         onCheckedChange = {
@@ -228,7 +233,6 @@ internal fun IntegrationsSection() {
                             }
                         }
                     }
-                    Spacer(Modifier.height(Space.x6))
                 }
                 AppText(
                     "Los conectores de reparto y marketplaces están preparados y funcionan en modo simulado hasta cargar las credenciales de cada servicio.",
@@ -236,7 +240,6 @@ internal fun IntegrationsSection() {
                 )
             }
         }
-        Spacer(Modifier.height(Space.x8))
     }
 }
 
@@ -253,24 +256,24 @@ internal fun TeamSection() {
             is Load.Loading -> SkeletonRows(4)
             is Load.Failed -> ErrorState(s.message, onRetry = { loader.reload() })
             is Load.Ready -> {
-                AppCard(Modifier.fillMaxWidth(), padding = Space.x2) {
+                AppCard(Modifier.fillMaxWidth(), padding = 0.dp) {
                     s.value.forEachIndexed { index, member ->
                         if (index > 0) AppDivider()
-                        Row(Modifier.fillMaxWidth().padding(Space.x3), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().padding(Space.x4), verticalAlignment = Alignment.CenterVertically) {
                             Avatar(member.name, size = 40.dp)
                             Spacer(Modifier.width(Space.x3))
                             Column(Modifier.weight(1f)) {
                                 AppText(member.name, style = AppTheme.type.title, maxLines = 1)
-                                AppText(member.email, style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 1)
+                                AppText(member.email, style = AppTheme.type.mono, color = colors.inkMuted, maxLines = 1)
                             }
-                            StatusPill(member.role.label(), tone = member.role.tone(), dot = false)
+                            Spacer(Modifier.width(Space.x2))
+                            TagBadge(member.role.label(), tone = if (member.role == Role.OWNER) Tone.PRIMARY else Tone.NEUTRAL)
                         }
                     }
                 }
-                Spacer(Modifier.height(Space.x5))
-                AppCard(Modifier.fillMaxWidth(), padding = Space.x5) {
-                    AppText("Qué puede hacer cada rol", style = AppTheme.type.title)
-                    Spacer(Modifier.height(Space.x3))
+                AppCard(Modifier.fillMaxWidth(), padding = Space.x4) {
+                    SectionHeader("Qué puede hacer cada rol")
+                    Spacer(Modifier.height(Space.x2))
                     listOf(
                         "Dueño" to "Todo: marca, menú, pagos, integraciones, pedidos y equipo.",
                         "Gerente" to "Marca, menú, pedidos e integraciones. No ve los pagos.",
@@ -278,13 +281,12 @@ internal fun TeamSection() {
                         "Cocina" to "Pantalla de cocina: aceptar, preparar y marcar listo.",
                     ).forEach { (role, what) ->
                         Row(Modifier.fillMaxWidth().padding(vertical = Space.x2)) {
-                            AppText(role, Modifier.width(88.dp), style = AppTheme.type.title)
-                            AppText(what, Modifier.weight(1f), color = colors.inkMuted)
+                            LabelText(role, Modifier.width(Space.x18 + Space.x4).padding(top = 2.dp), color = colors.ink)
+                            AppText(what, Modifier.weight(1f), style = AppTheme.type.bodySm, color = colors.inkMuted)
                         }
                     }
                 }
             }
         }
-        Spacer(Modifier.height(Space.x8))
     }
 }

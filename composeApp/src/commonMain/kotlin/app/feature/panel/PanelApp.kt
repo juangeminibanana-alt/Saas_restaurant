@@ -32,6 +32,7 @@ import app.ui.components.AppText
 import app.ui.components.BrandMark
 import app.ui.components.ButtonSize
 import app.ui.components.ButtonVariant
+import app.ui.components.LabelText
 import app.ui.components.NavItem
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
@@ -141,6 +142,8 @@ private fun PanelShell(session: UserSession, onOpenDiner: (String) -> Unit) {
     }
     val compact = LocalWindowSize.current == WindowSize.COMPACT
 
+    // Del restaurante sólo entra su acento: el panel lo usa para su única acción principal y sus conteos.
+    AppTheme(brand = brand?.theme) {
     AdminScaffold(
         title = current.label,
         navItems = navItems,
@@ -151,7 +154,7 @@ private fun PanelShell(session: UserSession, onOpenDiner: (String) -> Unit) {
                 BrandMark(name = restaurantName, logoUrl = brand?.theme?.logoUrl, size = 36.dp)
                 Column {
                     AppText(restaurantName, style = AppTheme.type.title, maxLines = 1)
-                    AppText("Panel del restaurante", style = AppTheme.type.label, color = AppTheme.colors.inkSubtle, maxLines = 1)
+                    LabelText("Panel")
                 }
             }
         },
@@ -180,5 +183,6 @@ private fun PanelShell(session: UserSession, onOpenDiner: (String) -> Unit) {
                 PanelSection.TEAM -> TeamSection()
             }
         }
+    }
     }
 }

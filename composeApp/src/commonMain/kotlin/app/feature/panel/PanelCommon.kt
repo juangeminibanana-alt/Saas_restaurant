@@ -3,14 +3,14 @@ package app.feature.panel
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,10 +30,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.shared.model.OrderStatus
@@ -43,12 +43,16 @@ import app.ui.components.AppCard
 import app.ui.components.AppDialog
 import app.ui.components.AppText
 import app.ui.components.ButtonVariant
+import app.ui.components.LabelText
 import app.ui.components.Skeleton
+import app.ui.components.StatusDot
 import app.ui.components.Tone
+import app.ui.components.flatSurface
 import app.ui.components.pressable
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
 import app.ui.theme.Motion
+import app.ui.theme.Sizes
 import app.ui.theme.Space
 import app.ui.theme.WindowSize
 import kotlin.coroutines.cancellation.CancellationException
@@ -99,35 +103,42 @@ internal fun pagePadding(): Dp = when (LocalWindowSize.current) {
     WindowSize.EXPANDED -> Space.x8
 }
 
-/** Contenedor estándar de una sección: scroll vertical, ancho máximo y aire responsivo. */
+/**
+ * Contenedor estándar de una sección: scroll vertical y ancho máximo. El margen lateral y el superior ya los pone
+ * el armazón del panel (16 en teléfono), así que aquí no se repiten: el contenido llega de margen a margen.
+ */
 @Composable
 internal fun PanelPage(maxWidth: Dp = 1180.dp, content: @Composable ColumnScope.() -> Unit) {
-    val pad = pagePadding()
     Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
         Column(
-            Modifier.widthIn(max = maxWidth).fillMaxWidth().padding(horizontal = pad, vertical = pad),
-            verticalArrangement = Arrangement.spacedBy(Space.x5),
+            Modifier.widthIn(max = maxWidth).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Space.x4),
         ) {
             content()
-            Spacer(Modifier.height(Space.x6))
+            Spacer(Modifier.height(Space.x10))
         }
     }
 }
 
-/** Rejilla simple (no perezosa) con columnas de igual ancho. */
+/** Rejilla simple (no perezosa) con columnas de igual ancho. [equalHeight] iguala la altura de cada fila. */
 @Composable
 internal fun <T> SimpleGrid(
     items: List<T>,
     columns: Int,
     modifier: Modifier = Modifier,
-    spacing: Dp = Space.x4,
+    spacing: Dp = Space.x2,
+    equalHeight: Boolean = false,
     cell: @Composable (T) -> Unit,
 ) {
     val cols = columns.coerceAtLeast(1)
+    val stretch = equalHeight && cols > 1
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(spacing)) {
         items.chunked(cols).forEach { rowItems ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing)) {
-                rowItems.forEach { item -> Box(Modifier.weight(1f)) { cell(item) } }
+            Row(
+                (if (stretch) Modifier.height(IntrinsicSize.Min) else Modifier).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+            ) {
+                rowItems.forEach { item -> Box(Modifier.weight(1f).then(if (stretch) Modifier.fillMaxHeight() else Modifier)) { cell(item) } }
                 repeat(cols - rowItems.size) { Spacer(Modifier.weight(1f)) }
             }
         }
@@ -141,32 +152,28 @@ internal fun PanelIcon(icon: ImageVector, modifier: Modifier = Modifier, tint: C
     Image(imageVector = icon, contentDescription = null, modifier = modifier.size(size), colorFilter = ColorFilter.tint(tint))
 }
 
-/** Ícono dentro de un cuadro suave, para encabezados de tarjeta. */
+/**
+ * Ícono dentro de un cuadro plano (superficie + filete, radio 8) para encabezados de tarjeta. El ícono va en tinta:
+ * el estado se dice con un `StatusPill`, no tiñendo el cuadro. [tone] se conserva por compatibilidad.
+ */
 @Composable
-internal fun IconBadge(icon: ImageVector, modifier: Modifier = Modifier, tone: Tone = Tone.NEUTRAL, size: Dp = 44.dp) {
+internal fun IconBadge(icon: ImageVector, modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") tone: Tone = Tone.NEUTRAL, size: Dp = Sizes.control) {
     val c = AppTheme.colors
-    val (bg, fg) = when (tone) {
-        Tone.NEUTRAL -> c.surfaceSunken to c.ink
-        Tone.PRIMARY -> c.primarySoft to c.primary
-        Tone.SUCCESS -> c.successSoft to c.success
-        Tone.WARNING -> c.warningSoft to c.warning
-        Tone.DANGER -> c.dangerSoft to c.danger
-        Tone.INFO -> c.infoSoft to c.info
-    }
-    Box(modifier.size(size).clip(AppTheme.shapes.sm).background(bg), contentAlignment = Alignment.Center) {
-        PanelIcon(icon, tint = fg, size = size * 0.48f)
+    Box(modifier.size(size).flatSurface(AppTheme.controlFill, c.line, AppTheme.shapes.sm), contentAlignment = Alignment.Center) {
+        PanelIcon(icon, tint = c.ink, size = Sizes.icon)
     }
 }
 
+/** Nombre de campo o de bloque: etiqueta en mono MAYÚSCULAS, con una pista opcional debajo. */
 @Composable
 internal fun FieldLabel(text: String, modifier: Modifier = Modifier, hint: String? = null) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        AppText(text, style = AppTheme.type.label, color = AppTheme.colors.inkMuted)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(Space.x1)) {
+        LabelText(text)
         if (hint != null) AppText(hint, style = AppTheme.type.bodySm, color = AppTheme.colors.inkSubtle)
     }
 }
 
-/** Opción seleccionable con borde animado (fuentes, radios, fotos). */
+/** Opción seleccionable: superficie + filete; elegida, el filete pasa a tinta (la selección nunca usa la brasa). */
 @Composable
 internal fun ChoiceCard(
     selected: Boolean,
@@ -176,13 +183,10 @@ internal fun ChoiceCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = AppTheme.colors
-    val border by animateColorAsState(if (selected) c.primary else c.line, tween(Motion.BASE), label = "choice-border")
-    val bg by animateColorAsState(if (selected) c.primarySoft else c.surface, tween(Motion.BASE), label = "choice-bg")
+    val ring by animateColorAsState(if (selected) c.select else c.line, tween(Motion.FAST), label = "choice-ring")
     Column(
         modifier
-            .clip(AppTheme.shapes.md)
-            .background(bg)
-            .border(if (selected) 2.dp else 1.dp, border, AppTheme.shapes.md)
+            .flatSurface(AppTheme.controlFill, ring, AppTheme.shapes.md)
             .pressable(onClick = onClick)
             .padding(padding),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -191,11 +195,43 @@ internal fun ChoiceCard(
     )
 }
 
+/** Aviso plano: superficie + filete con un punto del tono; título en tinta y texto en gris. Sin fondos de color. */
+@Composable
+internal fun PanelNotice(text: String, modifier: Modifier = Modifier, title: String? = null, tone: Tone = Tone.NEUTRAL) {
+    val c = AppTheme.colors
+    val dot = when (tone) {
+        Tone.SUCCESS -> c.positive
+        Tone.WARNING -> c.warning
+        Tone.DANGER -> c.danger
+        Tone.INFO -> c.info
+        Tone.PRIMARY -> c.primary
+        Tone.NEUTRAL -> c.inkSubtle
+    }
+    Row(
+        modifier.fillMaxWidth().flatSurface(AppTheme.controlFill, c.line, AppTheme.shapes.md).padding(Space.x3),
+        verticalAlignment = Alignment.Top,
+    ) {
+        StatusDot(dot, Modifier.padding(top = Space.x2 - 1.dp))
+        Spacer(Modifier.width(Space.x2))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Space.x1)) {
+            if (title != null) AppText(title, style = AppTheme.type.titleSm)
+            AppText(text, style = AppTheme.type.bodySm, color = if (title != null) c.inkMuted else c.ink)
+        }
+    }
+}
+
+/** Encabezado de columna de una tabla: etiqueta en mono MAYÚSCULAS. */
+@Composable
+internal fun ColumnLabel(text: String, modifier: Modifier = Modifier, end: Boolean = false) {
+    LabelText(text, modifier = modifier, textAlign = if (end) TextAlign.End else null)
+}
+
+/** Renglón de dato: nombre a la izquierda y cifra en mono a la derecha. [strong] = total. */
 @Composable
 internal fun KeyValueRow(label: String, value: String, modifier: Modifier = Modifier, strong: Boolean = false) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        AppText(label, Modifier.weight(1f), style = if (strong) AppTheme.type.title else AppTheme.type.body, color = if (strong) AppTheme.colors.ink else AppTheme.colors.inkMuted)
-        AppText(value, style = if (strong) AppTheme.type.title else AppTheme.type.body)
+        AppText(label, Modifier.weight(1f), style = if (strong) AppTheme.type.title else AppTheme.type.bodySm, color = if (strong) AppTheme.colors.ink else AppTheme.colors.inkMuted)
+        AppText(value, style = if (strong) AppTheme.type.monoMd else AppTheme.type.mono, maxLines = 1)
     }
 }
 
@@ -211,7 +247,7 @@ internal fun ConfirmDialog(
 ) {
     AppDialog(onDismiss = onDismiss, title = title, maxWidth = 440.dp) {
         Column(verticalArrangement = Arrangement.spacedBy(Space.x5)) {
-            AppText(message, color = AppTheme.colors.inkMuted)
+            AppText(message, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x2, Alignment.End)) {
                 AppButton("Cancelar", onClick = onDismiss, variant = ButtonVariant.GHOST)
                 AppButton(confirmText, onClick = onConfirm, variant = if (danger) ButtonVariant.DANGER else ButtonVariant.PRIMARY, loading = loading)
@@ -243,7 +279,7 @@ internal fun SkeletonRows(rows: Int = 5, modifier: Modifier = Modifier) {
 @Composable
 internal fun SkeletonCards(count: Int, columns: Int, height: Dp = 112.dp) {
     SimpleGrid(items = (0 until count).toList(), columns = columns) {
-        Skeleton(Modifier.fillMaxWidth().height(height), shape = AppTheme.shapes.md)
+        Skeleton(Modifier.fillMaxWidth().height(height), shape = AppTheme.shapes.lg)
     }
 }
 

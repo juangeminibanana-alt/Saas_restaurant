@@ -32,9 +32,11 @@ import app.ui.components.AppIcons
 import app.ui.components.AppSwitch
 import app.ui.components.AppText
 import app.ui.components.AppTextField
+import app.ui.components.ButtonSize
 import app.ui.components.ButtonVariant
 import app.ui.components.EmptyState
 import app.ui.components.ErrorState
+import app.ui.components.LabelText
 import app.ui.components.PageHeader
 import app.ui.components.Skeleton
 import app.ui.components.TagBadge
@@ -117,21 +119,26 @@ private fun planColumns(wide: Boolean, medium: Boolean): Int = if (wide) 3 else 
 @Composable
 private fun PlanCard(plan: Plan, tenantCount: Int, onEdit: () -> Unit) {
     val colors = AppTheme.colors
-    OpPanel(Modifier.fillMaxSize(), borderColor = if (plan.highlighted) colors.primary else colors.line) {
-        Column(Modifier.fillMaxSize().padding(Space.x6), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
+    // El plan destacado se marca con tinta ("Destacado") y un filete más fuerte, nunca con brasa.
+    OpPanel(Modifier.fillMaxSize(), borderColor = if (plan.highlighted) colors.lineStrong else colors.line) {
+        Column(Modifier.fillMaxSize().padding(Space.x5), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
             Row(horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.CenterVertically) {
-                AppText(plan.name.ifBlank { "Sin nombre" }, Modifier.weight(1f), style = AppTheme.type.h3, maxLines = 1)
+                LabelText(plan.name.ifBlank { "Sin nombre" }, Modifier.weight(1f), color = colors.ink)
                 if (plan.highlighted) TagBadge("Destacado", tone = Tone.PRIMARY)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                val type = AppTheme.type
+                AppText(
+                    formatMoney(plan.priceCents), Modifier.alignByBaseline(), maxLines = 1,
+                    style = type.h1.copy(fontFamily = type.monoLg.fontFamily, fontWeight = type.monoLg.fontWeight, letterSpacing = type.monoLg.letterSpacing),
+                )
+                AppText("/ mes", Modifier.alignByBaseline(), style = type.bodySm, color = colors.inkMuted)
             }
             if (plan.description.isNotBlank()) {
                 AppText(plan.description, style = AppTheme.type.bodySm, color = colors.inkMuted)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.x1), verticalAlignment = Alignment.Bottom) {
-                AppText(formatMoney(plan.priceCents), style = AppTheme.type.h1, maxLines = 1)
-                AppText("/mes", Modifier.padding(bottom = Space.x1), style = AppTheme.type.body, color = colors.inkMuted)
-            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x4)) {
-                OpKeyValue("Comisión por pedido", formatBps(plan.feeBps), Modifier.weight(1f))
+                OpKeyValue("Comisión", formatBps(plan.feeBps), Modifier.weight(1f), mono = true)
                 OpKeyValue(
                     "Sucursales",
                     if (plan.maxLocations >= UNLIMITED_LOCATIONS) "Ilimitadas" else "Hasta ${plan.maxLocations}",
@@ -142,7 +149,7 @@ private fun PlanCard(plan: Plan, tenantCount: Int, onEdit: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(Space.x2)) {
                 plan.features.forEach { feature ->
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.Top) {
-                        OpIcon(AppIcons.Check, tint = colors.success, size = 16.dp, modifier = Modifier.padding(top = 2.dp))
+                        OpIcon(AppIcons.Check, tint = colors.inkSubtle, size = 16.dp, modifier = Modifier.padding(top = 2.dp))
                         AppText(feature, Modifier.weight(1f), style = AppTheme.type.bodySm)
                     }
                 }
@@ -152,18 +159,15 @@ private fun PlanCard(plan: Plan, tenantCount: Int, onEdit: () -> Unit) {
             }
             Spacer(Modifier.weight(1f))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                AppText(
+                LabelText(
                     when (tenantCount) {
                         0 -> "Sin restaurantes"
                         1 -> "1 restaurante"
                         else -> "$tenantCount restaurantes"
                     },
                     Modifier.weight(1f),
-                    style = AppTheme.type.bodySm,
-                    color = colors.inkMuted,
-                    maxLines = 1,
                 )
-                AppButton("Editar", onClick = onEdit, variant = ButtonVariant.SECONDARY, icon = AppIcons.Edit)
+                AppButton("Editar", onClick = onEdit, variant = ButtonVariant.SECONDARY, size = ButtonSize.SM, icon = AppIcons.Edit)
             }
         }
     }

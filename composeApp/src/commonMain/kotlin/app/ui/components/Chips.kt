@@ -15,10 +15,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,27 +31,31 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.ui.theme.AppTheme
 import app.ui.theme.Motion
+import app.ui.theme.Space
 
 enum class Tone { NEUTRAL, PRIMARY, SUCCESS, WARNING, DANGER, INFO }
 
-/** (color de texto/acento, fondo suave) para un tono. */
+/** Color sólido de un tono: sólo se usa en el punto de estado o en el texto de una etiqueta, nunca como relleno suave. */
 @Composable
-private fun tonePair(tone: Tone): Pair<Color, Color> {
+@ReadOnlyComposable
+internal fun toneColor(tone: Tone): Color {
     val c = AppTheme.colors
     return when (tone) {
-        Tone.NEUTRAL -> c.inkMuted to c.surfaceSunken
-        Tone.PRIMARY -> c.primary to c.primarySoft
-        Tone.SUCCESS -> c.success to c.successSoft
-        Tone.WARNING -> c.warning to c.warningSoft
-        Tone.DANGER -> c.danger to c.dangerSoft
-        Tone.INFO -> c.info to c.infoSoft
+        Tone.NEUTRAL -> c.inkSubtle
+        Tone.PRIMARY -> c.primary
+        Tone.SUCCESS -> c.success
+        Tone.WARNING -> c.warning
+        Tone.DANGER -> c.danger
+        Tone.INFO -> c.info
     }
 }
 
-/** Chip de filtro / opción. Seleccionado: fondo en color de marca. */
+/**
+ * Chip de filtro / opción: superficie + filete, radio 8. Seleccionado: tinta sólida con texto oscuro
+ * (la selección nunca usa la brasa).
+ */
 @Composable
 fun AppChip(
     text: String,
@@ -62,29 +65,30 @@ fun AppChip(
     icon: ImageVector? = null,
 ) {
     val colors = AppTheme.colors
-    val shape = AppTheme.shapes.pill
+    val shape = AppTheme.shapes.sm
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val hovered by interaction.collectIsHoveredAsState()
     val clickable = onClick != null
-    val bg by animateColorAsState(
+    val fill = AppTheme.controlFill
+    val bg by animateColorAsState(if (selected) colors.select else fill, tween(Motion.FAST))
+    val fg by animateColorAsState(
         when {
-            selected -> colors.primary
-            hovered && clickable -> colors.surfaceSunken
-            else -> colors.surface
+            selected -> colors.onSelect
+            hovered && clickable -> colors.ink
+            else -> colors.inkMuted
         },
-        tween(Motion.BASE),
+        tween(Motion.FAST),
     )
-    val fg by animateColorAsState(if (selected) colors.onPrimary else colors.ink, tween(Motion.BASE))
-    val border by animateColorAsState(
+    val ring by animateColorAsState(
         when {
-            selected -> colors.primary
-            hovered && clickable -> colors.inkSubtle
-            else -> colors.lineStrong
+            selected -> Color.Transparent
+            hovered && clickable -> colors.lineStrong
+            else -> colors.line
         },
-        tween(Motion.BASE),
+        tween(Motion.FAST),
     )
-    val scale by animateFloatAsState(if (pressed && clickable) 0.95f else 1f, Motion.snappy())
+    val scale by animateFloatAsState(if (pressed && clickable) 0.97f else 1f, Motion.snappy())
 
     Row(
         modifier = modifier
@@ -95,7 +99,7 @@ fun AppChip(
             .height(36.dp)
             .clip(shape)
             .background(bg, shape)
-            .border(1.dp, border, shape)
+            .border(1.dp, ring, shape)
             .then(
                 if (onClick != null) {
                     Modifier
@@ -104,7 +108,7 @@ fun AppChip(
                         .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
                 } else Modifier,
             )
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -120,46 +124,57 @@ fun AppChip(
     }
 }
 
-/** Estado en forma de píldora, con punto de color opcional. */
+/**
+ * Estado: ficha plana (superficie + filete, radio 4) con un punto sólido del tono y la etiqueta en mono
+ * MAYÚSCULAS. El color vive sólo en el punto; el texto es tinta.
+ */
 @Composable
 fun StatusPill(text: String, modifier: Modifier = Modifier, tone: Tone = Tone.NEUTRAL, dot: Boolean = true) {
-    val (fg, bg) = tonePair(tone)
+    val colors = AppTheme.colors
+    val shape = AppTheme.shapes.xs
     Row(
         modifier = modifier
-            .height(26.dp)
-            .background(bg, AppTheme.shapes.pill)
-            .padding(start = if (dot) 9.dp else 11.dp, end = 11.dp),
+            .height(24.dp)
+            .background(AppTheme.controlFill, shape)
+            .border(1.dp, colors.line, shape)
+            .padding(horizontal = Space.x2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (dot) {
-            Box(Modifier.size(6.dp).background(fg, CircleShape))
+            StatusDot(toneColor(tone))
             Spacer(Modifier.width(6.dp))
         }
-        AppText(
-            text = text,
-            style = AppTheme.type.label.copy(fontWeight = FontWeight.SemiBold),
-            color = if (tone == Tone.NEUTRAL) AppTheme.colors.inkMuted else fg,
-            maxLines = 1,
-        )
+        LabelText(text, color = if (tone == Tone.NEUTRAL) colors.inkMuted else colors.ink)
     }
 }
 
-/** Etiqueta compacta (p. ej. "Nuevo", "Vegano", "Popular"). */
+/**
+ * Etiqueta compacta en mono MAYÚSCULAS (p. ej. "NUEVO", "VEGANO", "POPULAR"), radio 4.
+ * NEUTRAL y semánticos: ficha del color del fondo con filete (legible también encima de una fotografía) y el
+ * texto en el color del tono. PRIMARY: tinta sólida (destacado); nunca brasa.
+ */
 @Composable
 fun TagBadge(text: String, modifier: Modifier = Modifier, tone: Tone = Tone.NEUTRAL) {
-    val (fg, bg) = tonePair(tone)
+    val colors = AppTheme.colors
+    val shape = AppTheme.shapes.xs
+    val solid = tone == Tone.PRIMARY
     Box(
         modifier = modifier
-            .height(22.dp)
-            .background(bg, AppTheme.shapes.xs)
-            .padding(horizontal = 8.dp),
+            .height(20.dp)
+            .then(
+                if (solid) Modifier.background(colors.select, shape)
+                else Modifier.background(colors.canvas, shape).border(1.dp, colors.line, shape),
+            )
+            .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        AppText(
-            text = text,
-            style = AppTheme.type.label.copy(fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.2.sp),
-            color = fg,
-            maxLines = 1,
+        LabelText(
+            text,
+            color = when (tone) {
+                Tone.PRIMARY -> colors.onSelect
+                Tone.NEUTRAL -> colors.inkMuted
+                else -> toneColor(tone)
+            },
         )
     }
 }

@@ -2,7 +2,6 @@ package app.feature.diner
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -17,8 +16,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,28 +23,28 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.shared.model.Order
@@ -56,71 +53,80 @@ import app.shared.model.OrderType
 import app.shared.model.PaymentMethod
 import app.shared.util.formatMoney
 import app.shared.util.minutesSince
-import app.shared.util.nowMillis
-import app.ui.components.AppDivider
 import app.ui.components.AppIconButton
 import app.ui.components.AppIcons
 import app.ui.components.AppText
+import app.ui.components.LabelText
+import app.ui.components.StatusDot
 import app.ui.components.Tone
-import app.ui.components.pressable
+import app.ui.components.edgeBottom
+import app.ui.components.flatSurface
 import app.ui.theme.AppTheme
 import app.ui.theme.Motion
+import app.ui.theme.Sizes
 import app.ui.theme.Space
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
-/** Velo sobre fotografías: independiente del tema para que el texto blanco siempre contraste. */
-val PhotoScrim: Color = Color.Black
-val OnPhoto: Color = Color.White
-val TOP_BAR_HEIGHT: Dp = 56.dp
+/** Ancho máximo del contenido de las pantallas secundarias (pedido, seguimiento, historial). */
+val DinerPageWidth: Dp = 640.dp
+
+/** Margen lateral del menú: 16 en teléfono, 24 en pantallas anchas. */
+internal fun dinerGutter(compact: Boolean): Dp = if (compact) Space.gutter else Space.x6
 
 @Composable
-fun DinerIcon(icon: ImageVector, modifier: Modifier = Modifier, tint: Color = AppTheme.colors.ink, size: Dp = 20.dp) {
+fun DinerIcon(icon: ImageVector, modifier: Modifier = Modifier, tint: Color = AppTheme.colors.ink, size: Dp = Sizes.icon) {
     Image(imageVector = icon, contentDescription = null, modifier = modifier.size(size), colorFilter = ColorFilter.tint(tint))
 }
 
-/** Barra superior de las pantallas secundarias (carrito, seguimiento, mis pedidos). */
+/**
+ * Barra superior de las pantallas secundarias (pedido, pago, seguimiento, mis pedidos): la misma fila de 72
+ * que la navegación pegada del menú — botón de 44 para volver, antetítulo en mono y título 20/24 — con un
+ * filete abajo. El contenido se centra al mismo ancho que la página.
+ */
 @Composable
 fun DinerTopBar(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    maxWidth: Dp = DinerPageWidth,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    Column(modifier.fillMaxWidth().background(AppTheme.colors.canvas)) {
+    val colors = AppTheme.colors
+    Box(modifier.fillMaxWidth().background(colors.canvas).edgeBottom(colors.line), contentAlignment = Alignment.TopCenter) {
         Row(
-            Modifier.fillMaxWidth().height(TOP_BAR_HEIGHT).padding(horizontal = Space.x2),
+            Modifier
+                .widthIn(max = maxWidth)
+                .fillMaxWidth()
+                .height(Sizes.bar)
+                .padding(start = Space.gutter, end = Space.gutter, top = Space.x4, bottom = Space.x3),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AppIconButton(AppIcons.Back, onClick = onBack, contentDescription = "Volver")
-            Spacer(Modifier.width(Space.x2))
+            Spacer(Modifier.width(Space.x3))
             Column(Modifier.weight(1f)) {
-                AppText(title, style = AppTheme.type.h3, maxLines = 1)
-                if (!subtitle.isNullOrBlank()) AppText(subtitle, style = AppTheme.type.label, color = AppTheme.colors.inkMuted, maxLines = 1)
+                if (!subtitle.isNullOrBlank()) LabelText(subtitle)
+                AppText(title, style = AppTheme.type.h2, maxLines = 1)
             }
             actions()
-            Spacer(Modifier.width(Space.x2))
         }
-        AppDivider()
     }
 }
 
-/** Importe que "rueda" hacia arriba o abajo cuando cambia. */
+/** Importe en mono que cambia con un desplazamiento corto, sin rebote. */
 @Composable
 fun AnimatedMoney(
     cents: Long,
     modifier: Modifier = Modifier,
-    style: TextStyle = AppTheme.type.title,
+    style: TextStyle = AppTheme.type.mono,
     color: Color = AppTheme.colors.ink,
 ) {
     AnimatedContent(
         targetState = cents,
         modifier = modifier,
         transitionSpec = {
-            val up = targetState > initialState
-            (slideInVertically(tween(Motion.BASE, easing = Motion.standard)) { h -> if (up) h else -h } + fadeIn(tween(Motion.BASE)))
-                .togetherWith(slideOutVertically(tween(Motion.FAST, easing = Motion.exit)) { h -> if (up) -h else h } + fadeOut(tween(Motion.FAST)))
+            val dir = if (targetState > initialState) 1 else -1
+            (slideInVertically(tween(Motion.FAST, easing = Motion.standard)) { h -> dir * h / 3 } + fadeIn(tween(Motion.FAST)))
+                .togetherWith(slideOutVertically(tween(Motion.FAST, easing = Motion.exit)) { h -> -dir * h / 3 } + fadeOut(tween(Motion.FAST)))
                 .using(SizeTransform(clip = false))
         },
         label = "money",
@@ -129,114 +135,52 @@ fun AnimatedMoney(
     }
 }
 
-/** Botón primario de ancho completo con importe animado: "Agregar · $185". */
-@Composable
-fun PriceButton(label: String, cents: Long, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    val colors = AppTheme.colors
-    Row(
-        modifier
-            .heightIn(min = 52.dp)
-            .graphicsLayer { alpha = if (enabled) 1f else 0.5f }
-            .clip(AppTheme.shapes.control)
-            .background(colors.primary)
-            .pressable(enabled = enabled) { onClick() }
-            .padding(horizontal = Space.x5),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        AppText(label, style = AppTheme.type.title, color = colors.onPrimary, maxLines = 1)
-        AppText("  ·  ", style = AppTheme.type.title, color = colors.onPrimary.copy(alpha = 0.6f), maxLines = 1)
-        AnimatedMoney(cents, style = AppTheme.type.title, color = colors.onPrimary)
-    }
+/**
+ * Sube el contenido [by] y le resta esa altura (el `margin-top` negativo de la maqueta): la altura de
+ * mayúsculas del nombre coincide con el borde superior de la miniatura sin empujar lo que sigue.
+ */
+fun Modifier.pullUp(by: Dp): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    val shift = by.roundToPx()
+    layout(placeable.width, (placeable.height - shift).coerceAtLeast(0)) { placeable.place(0, -shift) }
 }
 
-/** Entrada escalonada (fade + slide) solo durante la primera carga del menú. */
-fun Modifier.staggerIn(order: Int, loadedAt: Long): Modifier = composed {
-    val animate = remember { nowMillis() - loadedAt < 1_400L }
-    val progress = remember { Animatable(if (animate) 0f else 1f) }
-    LaunchedEffect(Unit) {
-        if (animate) {
-            delay(order.coerceIn(0, 12) * 55L)
-            progress.animateTo(1f, tween(Motion.HERO, easing = Motion.standard))
-        }
-    }
-    graphicsLayer {
-        alpha = progress.value
-        translationY = (1f - progress.value) * 28.dp.toPx()
-    }
-}
-
-/** Radio (round) o casilla con transición de color. */
+/**
+ * Encabezado de sección del menú: título 20/24 y, a la derecha, una etiqueta en mono sobre la misma línea base.
+ * Con las compensaciones ópticas de la maqueta: el título entra 1 px en el margen y el tracking final de la
+ * etiqueta no cuenta, para que la tinta de ambos llegue exacta a los márgenes.
+ */
 @Composable
-fun SelectionMark(checked: Boolean, round: Boolean, modifier: Modifier = Modifier) {
-    val colors = AppTheme.colors
-    val fill by animateColorAsState(if (checked) colors.primary else Color.Transparent, tween(Motion.FAST), label = "mark-fill")
-    val stroke by animateColorAsState(if (checked) colors.primary else colors.lineStrong, tween(Motion.FAST), label = "mark-stroke")
-    val shape = if (round) CircleShape else AppTheme.shapes.xs
-    Box(
-        modifier.size(22.dp).clip(shape).background(fill).border(1.5.dp, stroke, shape),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (checked) {
-            if (round) Box(Modifier.size(8.dp).clip(CircleShape).background(colors.onPrimary))
-            else DinerIcon(AppIcons.Check, tint = colors.onPrimary, size = 14.dp)
+fun SectionHead(title: String, modifier: Modifier = Modifier, label: String? = null) {
+    Row(modifier.fillMaxWidth().padding(vertical = Space.x3)) {
+        AppText(title, modifier = Modifier.weight(1f).alignByBaseline().offset(x = -Sizes.hairline), style = AppTheme.type.h2, maxLines = 2)
+        if (!label.isNullOrBlank()) {
+            LabelText(label, modifier = Modifier.padding(start = Space.x4).alignByBaseline().offset(x = Sizes.hairline))
         }
     }
 }
 
+/**
+ * Cabecera de grupo: título 16/20 seminegrita y, a la derecha, su regla en mono ("ELIGE 1", "OPCIONAL").
+ * [pending]: falta una elección obligatoria — la etiqueta va en tinta con un punto sólido de brasa.
+ */
 @Composable
-fun DinerSpinner(modifier: Modifier = Modifier, diameter: Dp = 56.dp, color: Color = AppTheme.colors.primary) {
-    val transition = rememberInfiniteTransition(label = "spinner")
-    val angle by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),
-        label = "spinner-angle",
-    )
-    val track = AppTheme.colors.line
-    Canvas(modifier.size(diameter)) {
-        val stroke = this.size.minDimension * 0.09f
-        val inset = stroke / 2f
-        val arcSize = Size(this.size.width - stroke, this.size.height - stroke)
-        drawArc(track, 0f, 360f, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(stroke))
-        drawArc(color, angle - 90f, 96f, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
-    }
-}
-
-/** Círculo que rebota y palomita que se dibuja: confirmación de pago. */
-@Composable
-fun SuccessCheck(modifier: Modifier = Modifier, diameter: Dp = 96.dp) {
+fun GroupHead(title: String, modifier: Modifier = Modifier, label: String? = null, pending: Boolean = false) {
     val colors = AppTheme.colors
-    val scale = remember { Animatable(0.4f) }
-    val progress = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        launch { scale.animateTo(1f, Motion.bouncy()) }
-        delay(140)
-        progress.animateTo(1f, tween(Motion.HERO, easing = Motion.standard))
-    }
-    Box(
-        modifier
-            .size(diameter)
-            .graphicsLayer { scaleX = scale.value; scaleY = scale.value }
-            .clip(CircleShape)
-            .background(colors.successSoft),
-        contentAlignment = Alignment.Center,
-    ) {
-        val ink = colors.success
-        Canvas(Modifier.size(diameter * 0.46f)) {
-            val p = progress.value
-            val a = Offset(this.size.width * 0.10f, this.size.height * 0.54f)
-            val b = Offset(this.size.width * 0.40f, this.size.height * 0.82f)
-            val c = Offset(this.size.width * 0.92f, this.size.height * 0.22f)
-            val stroke = 4.dp.toPx()
-            val first = (p / 0.4f).coerceIn(0f, 1f)
-            val second = ((p - 0.4f) / 0.6f).coerceIn(0f, 1f)
-            if (first > 0f) drawLine(ink, a, Offset(a.x + (b.x - a.x) * first, a.y + (b.y - a.y) * first), stroke, StrokeCap.Round)
-            if (second > 0f) drawLine(ink, b, Offset(b.x + (c.x - b.x) * second, b.y + (c.y - b.y) * second), stroke, StrokeCap.Round)
+    Row(modifier.fillMaxWidth().padding(bottom = Space.x3)) {
+        AppText(title, modifier = Modifier.weight(1f).alignByBaseline(), style = AppTheme.type.h3, maxLines = 2)
+        if (!label.isNullOrBlank()) {
+            LabelText(
+                label,
+                modifier = Modifier.padding(start = Space.x4).alignByBaseline().offset(x = Sizes.hairline),
+                color = if (pending) colors.ink else colors.inkSubtle,
+                dot = if (pending) colors.primary else null,
+            )
         }
     }
 }
 
+/** Renglón de totales: concepto en texto chico e importe en mono; [strong] es el total (16/20 + mono 20/24). */
 @Composable
 fun TotalsRow(label: String, cents: Long, modifier: Modifier = Modifier, strong: Boolean = false) {
     val colors = AppTheme.colors
@@ -244,19 +188,83 @@ fun TotalsRow(label: String, cents: Long, modifier: Modifier = Modifier, strong:
         AppText(
             label,
             modifier = Modifier.weight(1f),
-            style = if (strong) AppTheme.type.h3 else AppTheme.type.body,
+            style = if (strong) AppTheme.type.h3 else AppTheme.type.bodySm,
             color = if (strong) colors.ink else colors.inkMuted,
+            maxLines = 1,
         )
-        AnimatedMoney(cents, style = if (strong) AppTheme.type.h3 else AppTheme.type.body, color = colors.ink)
+        AnimatedMoney(cents, style = if (strong) AppTheme.type.monoLg else AppTheme.type.mono)
     }
 }
 
 @Composable
-fun InfoLine(icon: ImageVector, text: String, modifier: Modifier = Modifier, tint: Color = AppTheme.colors.inkMuted) {
-    Row(modifier.padding(vertical = Space.x1), verticalAlignment = Alignment.CenterVertically) {
-        DinerIcon(icon, tint = tint, size = 18.dp)
-        Spacer(Modifier.width(Space.x2))
-        AppText(text, style = AppTheme.type.body, color = AppTheme.colors.inkMuted)
+fun InfoLine(icon: ImageVector, text: String, modifier: Modifier = Modifier, tint: Color = AppTheme.colors.inkSubtle) {
+    Row(modifier.padding(vertical = Space.x1), verticalAlignment = Alignment.Top) {
+        DinerIcon(icon, tint = tint)
+        Spacer(Modifier.width(Space.x3))
+        AppText(text, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted)
+    }
+}
+
+/** Aviso plano: superficie + filete, punto sólido del tono y texto chico. Sin tinte de fondo. */
+@Composable
+fun DinerNotice(text: String, tone: Color, modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
+    Row(
+        modifier.fillMaxWidth().flatSurface(AppTheme.controlFill, colors.line, AppTheme.shapes.md).padding(horizontal = Space.x4, vertical = Space.x3),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(Modifier.height(Space.x5), contentAlignment = Alignment.Center) { StatusDot(tone) }
+        Spacer(Modifier.width(Space.x3))
+        AppText(text, modifier = Modifier.weight(1f), style = AppTheme.type.bodySm, color = colors.ink)
+    }
+}
+
+/** Número de pedido en grande: la escala del nombre del restaurante (40/44) en Geist Mono. */
+val orderNumberStyle: TextStyle
+    @Composable @ReadOnlyComposable get() {
+        val type = AppTheme.type
+        return type.display.copy(fontFamily = type.monoLg.fontFamily, fontWeight = FontWeight.Medium, letterSpacing = type.monoLg.letterSpacing)
+    }
+
+/** Espera: un arco fino de tinta que gira. Sin halo. */
+@Composable
+fun DinerSpinner(modifier: Modifier = Modifier, diameter: Dp = Sizes.icon, color: Color = AppTheme.colors.ink) {
+    val transition = rememberInfiniteTransition(label = "spinner")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(820, easing = LinearEasing)),
+        label = "spinner-angle",
+    )
+    val track = AppTheme.colors.lineStrong
+    Canvas(modifier.size(diameter)) {
+        val stroke = 1.5.dp.toPx()
+        val inset = stroke / 2f
+        val arcSize = Size(this.size.width - stroke, this.size.height - stroke)
+        drawArc(track, 0f, 360f, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(stroke))
+        drawArc(color, angle - 90f, 96f, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+    }
+}
+
+/** Confirmación: ficha de tinta sólida (como un paso hecho de la línea de tiempo) con la palomita que se traza. */
+@Composable
+fun SuccessCheck(modifier: Modifier = Modifier, size: Dp = Sizes.control) {
+    val colors = AppTheme.colors
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { progress.animateTo(1f, tween(Motion.SLOW, easing = Motion.standard)) }
+    val ink = colors.onSelect
+    Box(modifier.size(size).background(colors.select, AppTheme.shapes.md), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(Sizes.icon)) {
+            val p = progress.value
+            val a = Offset(this.size.width * 0.20f, this.size.height * 0.52f)
+            val b = Offset(this.size.width * 0.42f, this.size.height * 0.74f)
+            val c = Offset(this.size.width * 0.82f, this.size.height * 0.28f)
+            val stroke = 1.5.dp.toPx()
+            val first = (p / 0.4f).coerceIn(0f, 1f)
+            val second = ((p - 0.4f) / 0.6f).coerceIn(0f, 1f)
+            if (first > 0f) drawLine(ink, a, Offset(a.x + (b.x - a.x) * first, a.y + (b.y - a.y) * first), stroke, StrokeCap.Round)
+            if (second > 0f) drawLine(ink, b, Offset(b.x + (c.x - b.x) * second, b.y + (c.y - b.y) * second), stroke, StrokeCap.Round)
+        }
     }
 }
 
@@ -270,14 +278,6 @@ fun tagLabel(tag: String): String = when (tag.lowercase()) {
     "vegano" -> "Vegano"
     "sin gluten" -> "Sin gluten"
     else -> tag.replaceFirstChar { it.uppercase() }
-}
-
-fun tagTone(tag: String): Tone = when (tag.lowercase()) {
-    "popular" -> Tone.PRIMARY
-    "nuevo" -> Tone.INFO
-    "picante" -> Tone.DANGER
-    "vegetariano", "vegano" -> Tone.SUCCESS
-    else -> Tone.NEUTRAL
 }
 
 fun OrderStatus.dinerLabel(): String = when (this) {
@@ -332,3 +332,6 @@ fun paymentHint(method: PaymentMethod): String = when (method) {
     PaymentMethod.MP_WALLET -> "Usa el dinero disponible en tu cuenta."
     PaymentMethod.PAYMENT_LINK -> "Te enviamos un link para pagar."
 }
+
+/** "3 platillos" / "1 platillo". */
+fun dishCount(count: Int): String = if (count == 1) "1 platillo" else "$count platillos"

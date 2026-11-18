@@ -14,10 +14,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import app.shared.data.RepositoryException
-import app.shared.model.BrandTheme
 import app.shared.model.Role
 import app.shared.model.TenantPublic
-import app.shared.model.ThemeMode
 import app.shared.model.UserSession
 import app.shell.LocalRepo
 import app.shell.LoginGate
@@ -71,10 +69,8 @@ private fun KitchenRoot(session: UserSession, onExit: () -> Unit) {
     var boardAttempt by remember(session.userId) { mutableIntStateOf(0) }
     LaunchedEffect(board, boardAttempt) { board.run() }
 
-    // La cocina es oscura por defecto; el botón de tema (ThemeController) puede invertirla.
-    val theme = (brand?.theme ?: BrandTheme()).copy(mode = ThemeMode.DARK)
-
-    AppTheme(brand = theme) {
+    // Del restaurante sólo entra su acento; el resto lo fija el sistema.
+    AppTheme(brand = brand?.theme) {
         Box(
             modifier = Modifier.fillMaxSize().background(AppTheme.colors.canvas),
             contentAlignment = Alignment.Center,

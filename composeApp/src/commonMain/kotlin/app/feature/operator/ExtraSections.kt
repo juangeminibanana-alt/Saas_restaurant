@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,6 +22,7 @@ import app.ui.components.AppIcons
 import app.ui.components.AppText
 import app.ui.components.ButtonSize
 import app.ui.components.ButtonVariant
+import app.ui.components.LabelText
 import app.ui.components.LoadingState
 import app.ui.components.PageHeader
 import app.ui.components.StatCard
@@ -45,8 +47,8 @@ internal fun SubscriptionsSection(store: OperatorStore, onReload: () -> Unit) {
     val mrr = active.sumOf { planPrice[it.planId] ?: it.mrrCents }
 
     OpPage {
-        PageHeader("Suscripciones", subtitle = "Cobro mensual a cada restaurante con Mercado Pago (preapproval)") {
-            AppButton("Actualizar", onClick = onReload, variant = ButtonVariant.SECONDARY, size = ButtonSize.SM, icon = AppIcons.Refresh)
+        PageHeader("Suscripciones", subtitle = "Cobro mensual a cada restaurante con Mercado Pago") {
+            if (!compact) AppButton("Actualizar", onClick = onReload, variant = ButtonVariant.SECONDARY, size = ButtonSize.SM, icon = AppIcons.Refresh)
         }
         if (tenants.isEmpty() && store.loading) {
             LoadingState(Modifier.fillMaxWidth().height(240.dp))
@@ -54,13 +56,12 @@ internal fun SubscriptionsSection(store: OperatorStore, onReload: () -> Unit) {
         }
         OpGrid(listOf(0, 1, 2, 3), columns = if (size == WindowSize.EXPANDED) 4 else 2) { i ->
             when (i) {
-                0 -> StatCard("Ingreso recurrente mensual", formatMoneyCompact(mrr), Modifier.fillMaxWidth(), icon = AppIcons.Chart)
-                1 -> StatCard("Suscripciones al corriente", active.size.toString(), Modifier.fillMaxWidth(), icon = AppIcons.Check)
-                2 -> StatCard("En periodo de prueba", tenants.count { it.status == TenantStatus.TRIAL }.toString(), Modifier.fillMaxWidth(), icon = AppIcons.Clock)
-                else -> StatCard("Cobros rechazados", tenants.count { it.status == TenantStatus.PAST_DUE }.toString(), Modifier.fillMaxWidth(), icon = AppIcons.Warning)
+                0 -> StatCard("Recurrente al mes", formatMoneyCompact(mrr), Modifier.fillMaxWidth())
+                1 -> StatCard("Al corriente", active.size.toString(), Modifier.fillMaxWidth())
+                2 -> StatCard("En prueba", tenants.count { it.status == TenantStatus.TRIAL }.toString(), Modifier.fillMaxWidth())
+                else -> StatCard("Rechazados", tenants.count { it.status == TenantStatus.PAST_DUE }.toString(), Modifier.fillMaxWidth())
             }
         }
-        Spacer(Modifier.height(Space.x5))
         OpPanel(Modifier.fillMaxWidth()) {
             tenants.forEachIndexed { index, t ->
                 if (index > 0) AppDivider()
@@ -75,11 +76,12 @@ internal fun SubscriptionsSection(store: OperatorStore, onReload: () -> Unit) {
                         )
                     }
                     if (!compact) {
-                        AppText("Mercado Pago · preapproval", style = AppTheme.type.bodySm, color = colors.inkSubtle, maxLines = 1)
+                        LabelText("Mercado Pago · preapproval")
                         Spacer(Modifier.width(Space.x5))
                     }
+                    Spacer(Modifier.width(Space.x2))
                     Column(horizontalAlignment = Alignment.End) {
-                        AppText(formatMoney(planPrice[t.planId] ?: t.mrrCents) + "/mes", style = AppTheme.type.title, maxLines = 1)
+                        AppText(formatMoney(planPrice[t.planId] ?: t.mrrCents), style = AppTheme.type.mono, maxLines = 1)
                         Spacer(Modifier.height(Space.x1))
                         StatusPill(t.status.billingLabel(), tone = t.status.tone())
                     }
@@ -87,13 +89,11 @@ internal fun SubscriptionsSection(store: OperatorStore, onReload: () -> Unit) {
             }
             AppDivider()
             Row(Modifier.fillMaxWidth().padding(Space.x4), verticalAlignment = Alignment.CenterVertically) {
-                AppText("Total recurrente (suscripciones al corriente)", Modifier.weight(1f), color = colors.inkMuted)
-                AppText(formatMoney(mrr) + "/mes", style = AppTheme.type.h3)
+                LabelText("Total recurrente al mes", Modifier.weight(1f))
+                AppText(formatMoney(mrr), style = AppTheme.type.monoLg, maxLines = 1)
             }
         }
-        Spacer(Modifier.height(Space.x4))
         OpNotice("Las fechas de cobro son una proyección; la fecha real la dicta la suscripción (preapproval) de Mercado Pago de cada restaurante.")
-        Spacer(Modifier.height(Space.x8))
     }
 }
 
@@ -120,7 +120,7 @@ internal fun SupportSection() {
             SAMPLE_TICKETS.forEachIndexed { index, ticket ->
                 if (index > 0) AppDivider()
                 Row(Modifier.fillMaxWidth().padding(horizontal = Space.x4, vertical = Space.x3), verticalAlignment = Alignment.CenterVertically) {
-                    AppText(ticket.id, Modifier.width(64.dp), style = monoStyle(), color = colors.inkSubtle)
+                    AppText(ticket.id, Modifier.width(Space.x14), style = monoStyle(), color = colors.inkSubtle, maxLines = 1)
                     Column(Modifier.weight(1f)) {
                         AppText(ticket.subject, style = AppTheme.type.title, maxLines = 2)
                         AppText("${ticket.tenant} · ${ticket.age}", style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 1)
@@ -133,9 +133,7 @@ internal fun SupportSection() {
                 }
             }
         }
-        Spacer(Modifier.height(Space.x4))
         OpNotice("Datos de ejemplo. El módulo de soporte se conecta en una fase posterior.")
-        Spacer(Modifier.height(Space.x8))
     }
 }
 
@@ -179,10 +177,9 @@ internal fun CredentialsSection(store: OperatorStore) {
             else "Modo demostración local: no hay backend conectado. Las credenciales se configuran como variables de entorno del backend.",
             icon = AppIcons.Lock,
         )
-        Spacer(Modifier.height(Space.x4))
-        OpGrid(CREDENTIAL_GROUPS, columns = if (size == WindowSize.EXPANDED) 2 else 1) { group ->
-            OpPanel(Modifier.fillMaxWidth()) {
-                Column(Modifier.fillMaxWidth().padding(Space.x5), verticalArrangement = Arrangement.spacedBy(Space.x3)) {
+        OpGrid(CREDENTIAL_GROUPS, columns = if (size == WindowSize.EXPANDED) 2 else 1, equalHeight = true) { group ->
+            OpPanel(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxWidth().padding(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x3)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         AppText(group.name, Modifier.weight(1f), style = AppTheme.type.title)
                         TagBadge(group.mode, tone = group.tone)
@@ -198,6 +195,5 @@ internal fun CredentialsSection(store: OperatorStore) {
                 }
             }
         }
-        Spacer(Modifier.height(Space.x8))
     }
 }

@@ -14,11 +14,11 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import app.platform.openExternalUrl
 import app.shared.model.OrderStatus
@@ -46,6 +45,7 @@ import app.ui.components.Tone
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
 import app.ui.theme.Motion
+import app.ui.theme.Sizes
 import app.ui.theme.Space
 import app.ui.theme.WindowSize
 import kotlin.coroutines.cancellation.CancellationException
@@ -53,8 +53,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Menú digital del comensal (Fase 1). 100% marca del restaurante: colores, fuente display,
- * radios y modo claro/oscuro salen de `tenant.theme`.
+ * Menú digital del comensal (Fase 1), en el sistema NOCHE. Marca blanca: del restaurante sólo entran su
+ * color de acento (`tenant.theme.primary`) y su fotografía; tipografía, radios y modo oscuro son del sistema.
  * `slug` admite sufijos: "brasa-demo?mesa=4" (QR por mesa) y "brasa-demo?order=<id>" (regreso de Mercado Pago).
  */
 @Composable
@@ -251,36 +251,41 @@ private fun DinerContent(state: DinerState, tenant: TenantPublic, onExit: () -> 
     }
 }
 
-/** Esqueleto de carga: portada, pestañas y tarjetas con shimmer. */
+/**
+ * Esqueleto de carga con la misma retícula del menú: portada, fila de buscar + categorías, encabezado,
+ * mosaico grande y dos filas. Superficies planas que respiran; nada brilla.
+ */
 @Composable
 fun MenuSkeleton() {
-    val columns = when (LocalWindowSize.current) {
-        WindowSize.COMPACT -> 1
-        WindowSize.MEDIUM -> 2
-        WindowSize.EXPANDED -> 3
-    }
-    val pad = if (columns == 1) Space.x4 else Space.x6
+    val compact = LocalWindowSize.current == WindowSize.COMPACT
+    val gutter = dinerGutter(compact)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = 1180.dp).fillMaxSize()) {
-            Skeleton(Modifier.fillMaxWidth().height(if (columns == 1) 280.dp else 340.dp), shape = RectangleShape)
-            Column(Modifier.fillMaxWidth().padding(horizontal = pad, vertical = Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
-                    repeat(3) { Skeleton(Modifier.width(76.dp).height(22.dp), shape = AppTheme.shapes.pill) }
-                }
-                Skeleton(Modifier.fillMaxWidth().height(48.dp), shape = AppTheme.shapes.control)
-                Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
-                    repeat(4) { Skeleton(Modifier.width(92.dp).height(36.dp), shape = AppTheme.shapes.pill) }
-                }
+            // Identidad: antetítulo, nombre y ficha de datos, al pie de donde irá la portada.
+            Column(
+                Modifier.fillMaxWidth().height(SkeletonCover).padding(horizontal = gutter),
+                verticalArrangement = Arrangement.Bottom,
+            ) {
+                Skeleton(Modifier.width(Space.x18 * 3).height(Space.x3), shape = AppTheme.shapes.xs)
+                Spacer(Modifier.height(Space.x3))
+                Skeleton(Modifier.width(Space.x18 * 3).height(Space.x8))
+                Spacer(Modifier.height(Space.x6))
+                Skeleton(Modifier.fillMaxWidth().height(Space.x3), shape = AppTheme.shapes.xs)
+            }
+            Row(Modifier.fillMaxWidth().padding(start = gutter, top = Space.x4, bottom = Space.x3), horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                Skeleton(Modifier.size(Sizes.control), shape = AppTheme.shapes.md)
+                Skeleton(Modifier.weight(1f).height(Sizes.control), shape = AppTheme.shapes.md)
+            }
+            Column(Modifier.fillMaxWidth().padding(horizontal = gutter)) {
+                Skeleton(Modifier.padding(vertical = Space.x3).width(Space.x18 * 2).height(Space.x6))
+                Skeleton(Modifier.fillMaxWidth().height(SkeletonTile), shape = AppTheme.shapes.lg)
                 repeat(2) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x4)) {
-                        repeat(columns) {
-                            Column(Modifier.weight(1f)) {
-                                Skeleton(Modifier.fillMaxWidth().aspectRatio(16f / 10f), shape = AppTheme.shapes.lg)
-                                Spacer(Modifier.height(Space.x3))
-                                Skeleton(Modifier.fillMaxWidth(0.6f).height(18.dp))
-                                Spacer(Modifier.height(Space.x2))
-                                Skeleton(Modifier.fillMaxWidth(0.9f).height(14.dp))
-                            }
+                    Row(Modifier.fillMaxWidth().padding(top = Space.x6), horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
+                        Skeleton(Modifier.size(Sizes.thumb), shape = AppTheme.shapes.md)
+                        Column(Modifier.weight(1f)) {
+                            Skeleton(Modifier.fillMaxWidth(0.6f).height(Space.x4))
+                            Spacer(Modifier.height(Space.x2))
+                            Skeleton(Modifier.fillMaxWidth(0.9f).height(Space.x3))
                         }
                     }
                 }
@@ -288,3 +293,7 @@ fun MenuSkeleton() {
         }
     }
 }
+
+/** Alto de la portada y del mosaico grande en el esqueleto (los de la maqueta en un teléfono de 844). */
+private val SkeletonCover = 316.dp
+private val SkeletonTile = 304.dp

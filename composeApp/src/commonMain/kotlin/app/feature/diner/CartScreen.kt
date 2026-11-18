@@ -1,20 +1,13 @@
 package app.feature.diner
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,135 +22,195 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.shared.model.OrderType
-import app.shared.model.PaymentMethod
 import app.shared.model.TenantPublic
 import app.shared.util.formatMoney
 import app.shared.util.label
 import app.ui.components.AppButton
-import app.ui.components.AppChip
-import app.ui.components.AppDivider
-import app.ui.components.AppIconButton
 import app.ui.components.AppIcons
 import app.ui.components.AppText
 import app.ui.components.AppTextField
-import app.ui.components.ButtonSize
+import app.ui.components.BottomBar
 import app.ui.components.DishImage
 import app.ui.components.EmptyState
+import app.ui.components.LabelText
+import app.ui.components.OptionList
+import app.ui.components.OptionRow
 import app.ui.components.QuantityStepper
+import app.ui.components.SectionHeader
 import app.ui.components.SegmentedControl
+import app.ui.components.edgeBottom
+import app.ui.components.edgeTop
+import app.ui.components.flatSurface
 import app.ui.components.pressable
 import app.ui.theme.AppTheme
+import app.ui.theme.LocalSurfaceLevel
 import app.ui.theme.Motion
+import app.ui.theme.Sizes
 import app.ui.theme.Space
 
-/** Carrito a pantalla completa (teléfono y tablet). */
+/** Ancho del panel de pedido fijo en escritorio. */
+private val CartPanelWidth = 360.dp
+
+/** Pedido a pantalla completa (teléfono y tablet). */
 @Composable
 fun CartScreen(state: DinerState, tenant: TenantPublic, onPay: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         DinerTopBar(title = "Tu pedido", subtitle = tenant.name, onBack = { state.screen = DinerScreen.MENU })
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            CartBody(state, tenant, onPay, Modifier.widthIn(max = 640.dp).fillMaxSize(), onBrowse = { state.screen = DinerScreen.MENU })
-        }
+        CartBody(state, tenant, onPay, Modifier.fillMaxSize(), onBrowse = { state.screen = DinerScreen.MENU })
     }
 }
 
-/** Panel de pedido fijo a la derecha (escritorio, 360dp). */
+/** Panel de pedido fijo a la derecha (escritorio): un mosaico de superficie 1 con filete que ocupa todo el alto. */
 @Composable
 fun CartPanel(state: DinerState, tenant: TenantPublic, onPay: () -> Unit, modifier: Modifier = Modifier) {
     val colors = AppTheme.colors
-    val shape = AppTheme.shapes.lg
-    Column(
-        modifier.width(360.dp).fillMaxHeight().padding(top = TOP_BAR_HEIGHT + Space.x4, end = Space.x6, bottom = Space.x6),
-    ) {
-        Column(Modifier.fillMaxSize().clip(shape).background(colors.surface).border(1.dp, colors.line, shape)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = Space.x4, vertical = Space.x4), verticalAlignment = Alignment.CenterVertically) {
-                DinerIcon(AppIcons.Bag, tint = colors.ink, size = 20.dp)
-                Spacer(Modifier.width(Space.x2))
-                AppText("Tu pedido", modifier = Modifier.weight(1f), style = AppTheme.type.h3)
-                if (state.itemCount > 0) {
-                    AppText(
-                        if (state.itemCount == 1) "1 platillo" else "${state.itemCount} platillos",
-                        style = AppTheme.type.label,
-                        color = colors.inkMuted,
-                    )
-                }
+    Column(modifier.width(CartPanelWidth).fillMaxHeight().padding(top = Space.x6, end = Space.x6, bottom = Space.x6)) {
+        CompositionLocalProvider(LocalSurfaceLevel provides 1) {
+            Column(Modifier.fillMaxSize().flatSurface(colors.surface, colors.line, AppTheme.shapes.lg)) {
+                SectionHeader(
+                    title = "Tu pedido",
+                    modifier = Modifier.edgeBottom(colors.line).padding(horizontal = Space.gutter, vertical = Space.x4),
+                    label = if (state.itemCount > 0) dishCount(state.itemCount) else null,
+                )
+                CartBody(state, tenant, onPay, Modifier.fillMaxSize())
             }
-            AppDivider()
-            CartBody(state, tenant, onPay, Modifier.fillMaxSize())
         }
     }
 }
 
-/** Contenido compartido del carrito: renglones, tipo de pedido, propina, pago y totales. */
+/**
+ * Contenido compartido del pedido: renglones, tipo de pedido, propina, notas, pago y cuenta, con la barra
+ * sólida al pie (total en mono a la izquierda, la brasa "Pagar" a la derecha).
+ * El contenido se centra a [DinerPageWidth]; la barra va de borde a borde.
+ */
 @Composable
 fun CartBody(state: DinerState, tenant: TenantPublic, onPay: () -> Unit, modifier: Modifier = Modifier, onBrowse: (() -> Unit)? = null) {
-    val colors = AppTheme.colors
     if (state.cart.isEmpty()) {
         Box(modifier, contentAlignment = Alignment.Center) {
             EmptyState(
                 title = "Tu pedido está vacío",
-                modifier = Modifier.fillMaxWidth().padding(Space.x6),
+                modifier = Modifier.fillMaxWidth().padding(Space.x2),
                 message = "Agrega platillos del menú y aquí verás tu cuenta.",
                 icon = AppIcons.Bag,
                 actionText = if (onBrowse != null) "Ver el menú" else null,
                 onAction = onBrowse,
             )
         }
-    } else {
-        Column(modifier) {
+        return
+    }
+    BoxWithConstraints(modifier) {
+        // Margen de página, o lo que haga falta para centrar el contenido a su ancho máximo.
+        val side: Dp = if (maxWidth > DinerPageWidth) (maxWidth - DinerPageWidth) / 2 + Space.gutter else Space.gutter
+        Column(Modifier.fillMaxSize()) {
             LazyColumn(
                 Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = Space.x4, vertical = Space.x4),
+                contentPadding = PaddingValues(start = side, end = side, top = Space.x1, bottom = Space.x6),
             ) {
-                items(items = state.cart, key = { it.key }) { line ->
-                    Column(Modifier.animateItem()) {
-                        CartLineRow(line, state)
-                        AppDivider(Modifier.padding(vertical = Space.x3))
-                    }
+                itemsIndexed(items = state.cart, key = { _, line -> line.key }) { index, line ->
+                    CartLineRow(line, state, last = index == state.cart.lastIndex, modifier = Modifier.animateItem())
                 }
                 item(key = "sec-type") { OrderTypeSection(state, tenant) }
                 item(key = "sec-tip") { TipSection(state) }
                 item(key = "sec-notes") {
-                    Column(Modifier.fillMaxWidth().padding(top = Space.x5)) {
-                        AppTextField(
-                            value = state.orderNotes,
-                            onValueChange = { if (it.length <= 200) state.orderNotes = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = "Notas para el restaurante",
-                            placeholder = "Alergias, cubiertos, indicaciones…",
-                            singleLine = false,
-                            minLines = 2,
-                        )
-                    }
+                    AppTextField(
+                        value = state.orderNotes,
+                        onValueChange = { if (it.length <= 200) state.orderNotes = it },
+                        modifier = Modifier.fillMaxWidth().padding(top = Space.x6),
+                        label = "Notas para el restaurante",
+                        placeholder = "Alergias, cubiertos, indicaciones…",
+                        singleLine = false,
+                        minLines = 2,
+                    )
                 }
                 item(key = "sec-pay") { PaymentSection(state) }
                 item(key = "sec-totals") { TotalsSection(state, tenant) }
             }
-            AppDivider()
-            Column(Modifier.fillMaxWidth().background(colors.surface).padding(horizontal = Space.x4, vertical = Space.x3)) {
-                AppButton(
-                    text = "Pagar " + formatMoney(state.totalCents),
-                    onClick = onPay,
-                    size = ButtonSize.LG,
-                    icon = AppIcons.Lock,
-                    loading = state.payPhase == PayPhase.CREATING,
-                    enabled = state.payPhase == PayPhase.IDLE || state.payPhase == PayPhase.CREATING,
-                    fullWidth = true,
+            BottomBar {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Row(
+                        Modifier.widthIn(max = DinerPageWidth - Space.gutter * 2).fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Space.x3),
+                    ) {
+                        Column(Modifier.width(BarSummaryWidth)) {
+                            LabelText("Total")
+                            AnimatedMoney(state.totalCents, style = AppTheme.type.monoLg)
+                        }
+                        AppButton(
+                            text = "Pagar",
+                            onClick = onPay,
+                            modifier = Modifier.weight(1f),
+                            icon = AppIcons.Lock,
+                            loading = state.payPhase == PayPhase.CREATING,
+                            enabled = state.payPhase == PayPhase.IDLE || state.payPhase == PayPhase.CREATING,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Renglón del pedido: la misma fila del menú — miniatura de 80, nombre 16/20 y lo elegido debajo — con el
+ * importe del renglón en mono y, a la derecha, quitar y la cantidad (ficha de brasa: ya es tu pedido).
+ */
+@Composable
+private fun CartLineRow(line: CartLine, state: DinerState, last: Boolean, modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
+    val frame = framingFor(line.item.imageUrl, PhotoUse.THUMB)
+    Row(
+        modifier
+            .fillMaxWidth()
+            .then(if (last) Modifier else Modifier.edgeBottom(colors.line))
+            .padding(vertical = Space.x3),
+    ) {
+        DishImage(
+            line.item.imageUrl,
+            modifier = Modifier.size(Sizes.thumb),
+            contentDescription = null,
+            alignment = frame.alignment,
+            zoom = frame.zoom,
+        )
+        Spacer(Modifier.width(Space.x3))
+        Column(Modifier.weight(1f).heightIn(min = Sizes.thumb), verticalArrangement = Arrangement.SpaceBetween) {
+            Column(Modifier.fillMaxWidth().pullUp(Space.x1)) {
+                AppText(line.item.name, style = AppTheme.type.title, maxLines = 2)
+                if (line.summary.isNotBlank()) {
+                    AppText(line.summary, style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 3)
+                }
+            }
+            Row(Modifier.fillMaxWidth().height(Sizes.controlSm), verticalAlignment = Alignment.CenterVertically) {
+                AnimatedMoney(line.totalCents, modifier = Modifier.weight(1f))
+                Box(
+                    Modifier
+                        .size(Sizes.controlSm)
+                        .semantics { contentDescription = "Quitar del pedido" }
+                        .pressable(scale = 0.92f) { state.remove(line.key) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    DinerIcon(AppIcons.Delete, tint = colors.inkSubtle)
+                }
+                Spacer(Modifier.width(Space.x1))
+                QuantityStepper(
+                    quantity = line.quantity,
+                    onChange = { state.setQuantity(line.key, it) },
+                    min = 0,
+                    max = 99,
+                    compact = true,
+                    inOrder = true,
                 )
             }
         }
@@ -165,43 +218,10 @@ fun CartBody(state: DinerState, tenant: TenantPublic, onPay: () -> Unit, modifie
 }
 
 @Composable
-private fun CartLineRow(line: CartLine, state: DinerState) {
-    val colors = AppTheme.colors
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        DishImage(line.item.imageUrl, modifier = Modifier.size(68.dp), contentDescription = line.item.name, shape = AppTheme.shapes.sm)
-        Spacer(Modifier.width(Space.x3))
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.Top) {
-                AppText(line.item.name, modifier = Modifier.weight(1f).padding(top = Space.x1), style = AppTheme.type.title, maxLines = 2)
-                AppIconButton(AppIcons.Delete, onClick = { state.remove(line.key) }, contentDescription = "Quitar del pedido", tint = colors.inkSubtle)
-            }
-            if (line.summary.isNotBlank()) {
-                AppText(line.summary, style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 3)
-            }
-            Spacer(Modifier.height(Space.x2))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                QuantityStepper(quantity = line.quantity, onChange = { state.setQuantity(line.key, it) }, min = 0, max = 99, compact = true)
-                Spacer(Modifier.weight(1f))
-                AnimatedMoney(line.totalCents, style = AppTheme.type.title)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SectionTitle(title: String, subtitle: String? = null) {
-    Column(Modifier.fillMaxWidth().padding(top = Space.x5, bottom = Space.x3)) {
-        AppText(title, style = AppTheme.type.title)
-        if (subtitle != null) AppText(subtitle, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted)
-    }
-}
-
-@Composable
 private fun OrderTypeSection(state: DinerState, tenant: TenantPublic) {
-    val colors = AppTheme.colors
     val types = remember(tenant.orderTypes) { tenant.orderTypes.ifEmpty { OrderType.entries.toList() } }
-    Column(Modifier.fillMaxWidth()) {
-        SectionTitle("¿Cómo lo quieres?")
+    Column(Modifier.fillMaxWidth().padding(top = Space.x6)) {
+        GroupHead("¿Cómo lo quieres?")
         if (types.size > 1) {
             SegmentedControl(
                 options = types.map { it.label() },
@@ -209,17 +229,14 @@ private fun OrderTypeSection(state: DinerState, tenant: TenantPublic) {
                 onSelect = { index -> types.getOrNull(index)?.let { state.orderType = it } },
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(Space.x3))
+            Spacer(Modifier.height(Space.x4))
         }
         AnimatedContent(
             targetState = state.orderType,
-            transitionSpec = {
-                (fadeIn(tween(Motion.BASE, easing = Motion.standard)) + slideInVertically(tween(Motion.BASE, easing = Motion.standard)) { it / 6 })
-                    .togetherWith(fadeOut(tween(Motion.FAST, easing = Motion.exit)))
-            },
+            transitionSpec = { fadeIn(tween(Motion.BASE, easing = Motion.standard)).togetherWith(fadeOut(tween(Motion.FAST, easing = Motion.exit))) },
             label = "order-type-fields",
         ) { type ->
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.x3)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
                 if (type == OrderType.DINE_IN) {
                     AppTextField(
                         value = state.tableLabel,
@@ -262,11 +279,7 @@ private fun OrderTypeSection(state: DinerState, tenant: TenantPublic) {
                             minLines = 2,
                             error = if (state.showErrors && state.address.isBlank()) "Escribe la dirección" else null,
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            DinerIcon(AppIcons.Bike, tint = colors.inkMuted, size = 18.dp)
-                            Spacer(Modifier.width(Space.x2))
-                            AppText("Envío a domicilio: " + formatMoney(DELIVERY_FEE_CENTS), style = AppTheme.type.bodySm, color = colors.inkMuted)
-                        }
+                        InfoLine(AppIcons.Bike, "Envío a domicilio: " + formatMoney(DELIVERY_FEE_CENTS))
                     }
                 }
             }
@@ -276,139 +289,52 @@ private fun OrderTypeSection(state: DinerState, tenant: TenantPublic) {
 
 @Composable
 private fun TipSection(state: DinerState) {
-    Column(Modifier.fillMaxWidth()) {
-        SectionTitle("Propina", "Opcional. Va completa para el equipo.")
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
-            TIP_OPTIONS.forEach { percent ->
-                AppChip(
-                    text = if (percent == 0) "Sin propina" else "$percent%",
-                    selected = state.tipPercent == percent,
-                    onClick = { state.tipPercent = percent },
-                )
-            }
-        }
+    Column(Modifier.fillMaxWidth().padding(top = Space.x6)) {
+        GroupHead("Propina", label = "Opcional")
+        SegmentedControl(
+            options = TIP_OPTIONS.map { if (it == 0) "Sin propina" else "$it%" },
+            selectedIndex = TIP_OPTIONS.indexOf(state.tipPercent).coerceAtLeast(0),
+            onSelect = { index -> TIP_OPTIONS.getOrNull(index)?.let { state.tipPercent = it } },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(Space.x2))
+        AppText("Va completa para el equipo.", style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted)
     }
 }
 
 @Composable
 private fun PaymentSection(state: DinerState) {
-    val colors = AppTheme.colors
-    Column(Modifier.fillMaxWidth()) {
-        SectionTitle("Método de pago")
-        Column(verticalArrangement = Arrangement.spacedBy(Space.x2)) {
-            DINER_PAYMENT_METHODS.forEach { method ->
-                PaymentMethodRow(method, selected = state.paymentMethod == method, onClick = { state.paymentMethod = method })
+    Column(Modifier.fillMaxWidth().padding(top = Space.x6)) {
+        GroupHead("Método de pago", label = "Elige 1")
+        OptionList {
+            DINER_PAYMENT_METHODS.forEachIndexed { index, method ->
+                OptionRow(
+                    text = method.label(),
+                    selected = state.paymentMethod == method,
+                    onClick = { state.paymentMethod = method },
+                    first = index == 0,
+                )
             }
         }
         Spacer(Modifier.height(Space.x3))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            DinerIcon(AppIcons.Lock, tint = colors.success, size = 16.dp)
-            Spacer(Modifier.width(Space.x2))
-            AppText("Pago seguro con Mercado Pago", style = AppTheme.type.bodySm, color = colors.inkMuted)
-        }
+        InfoLine(paymentIcon(state.paymentMethod), paymentHint(state.paymentMethod))
+        InfoLine(AppIcons.Lock, "Pago seguro con Mercado Pago")
     }
 }
 
-@Composable
-private fun PaymentMethodRow(method: PaymentMethod, selected: Boolean, onClick: () -> Unit) {
-    val colors = AppTheme.colors
-    val shape = AppTheme.shapes.md
-    val stroke by animateColorAsState(if (selected) colors.primary else colors.line, tween(Motion.BASE), label = "pm-stroke")
-    val fill by animateColorAsState(if (selected) colors.primarySoft else colors.surface, tween(Motion.BASE), label = "pm-fill")
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(min = 64.dp)
-            .clip(shape)
-            .background(fill)
-            .border(if (selected) 1.5.dp else 1.dp, stroke, shape)
-            .pressable(scale = 0.99f) { onClick() }
-            .padding(horizontal = Space.x4, vertical = Space.x3),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(40.dp).clip(AppTheme.shapes.sm).background(colors.surfaceSunken), contentAlignment = Alignment.Center) {
-            DinerIcon(paymentIcon(method), tint = if (selected) colors.primary else colors.inkMuted, size = 22.dp)
-        }
-        Spacer(Modifier.width(Space.x3))
-        Column(Modifier.weight(1f)) {
-            AppText(method.label(), style = AppTheme.type.title, maxLines = 1)
-            AppText(paymentHint(method), style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 2)
-        }
-        Spacer(Modifier.width(Space.x3))
-        SelectionMark(checked = selected, round = true)
-    }
-}
-
+/** La cuenta: cada concepto con su importe en mono. El total vive en la barra, siempre a la vista. */
 @Composable
 private fun TotalsSection(state: DinerState, tenant: TenantPublic) {
     val colors = AppTheme.colors
-    Column(Modifier.fillMaxWidth().padding(top = Space.x5)) {
+    Column(Modifier.fillMaxWidth().padding(top = Space.x6)) {
         if (!tenant.isOpen) {
-            Row(
-                Modifier.fillMaxWidth().clip(AppTheme.shapes.md).background(colors.warningSoft).padding(Space.x3),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DinerIcon(AppIcons.Clock, tint = colors.warning, size = 18.dp)
-                Spacer(Modifier.width(Space.x2))
-                AppText("El restaurante está cerrado. Prepararemos tu pedido al abrir.", style = AppTheme.type.bodySm, color = colors.ink)
-            }
+            DinerNotice("El restaurante está cerrado. Prepararemos tu pedido al abrir.", colors.warning)
             Spacer(Modifier.height(Space.x4))
         }
-        TotalsRow("Subtotal", state.subtotalCents)
-        if (state.deliveryFeeCents > 0) TotalsRow("Envío", state.deliveryFeeCents)
-        if (state.tipCents > 0) TotalsRow("Propina (${state.tipPercent}%)", state.tipCents)
-        AppDivider(Modifier.padding(vertical = Space.x2))
-        TotalsRow("Total", state.totalCents, strong = true)
-        Spacer(Modifier.height(Space.x2))
-    }
-}
-
-/** Barra flotante del carrito (teléfono/tablet): contador que rebota al agregar, total y "Ver pedido". */
-@Composable
-fun FloatingCartBar(state: DinerState, modifier: Modifier = Modifier, onOpen: () -> Unit) {
-    val colors = AppTheme.colors
-    val bump = remember { Animatable(1f) }
-    LaunchedEffect(state.addPulse) {
-        if (state.addPulse > 0) {
-            bump.snapTo(1.4f)
-            bump.animateTo(1f, Motion.bouncy())
-        }
-    }
-    AnimatedVisibility(
-        visible = state.itemCount > 0,
-        modifier = modifier,
-        enter = slideInVertically(tween(Motion.SLOW, easing = Motion.standard)) { it } + fadeIn(tween(Motion.BASE)),
-        exit = slideOutVertically(tween(Motion.BASE, easing = Motion.exit)) { it } + fadeOut(tween(Motion.BASE)),
-    ) {
-        Box(Modifier.fillMaxWidth().padding(horizontal = Space.x4, vertical = Space.x4), contentAlignment = Alignment.Center) {
-            Row(
-                Modifier
-                    .widthIn(max = 520.dp)
-                    .fillMaxWidth()
-                    .shadow(12.dp, AppTheme.shapes.control)
-                    .clip(AppTheme.shapes.control)
-                    .background(colors.primary)
-                    .pressable { onOpen() }
-                    .heightIn(min = 60.dp)
-                    .padding(horizontal = Space.x4),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier
-                        .graphicsLayer { scaleX = bump.value; scaleY = bump.value }
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(colors.onPrimary),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppText(state.itemCount.toString(), style = AppTheme.type.label, color = colors.primary, maxLines = 1)
-                }
-                Spacer(Modifier.width(Space.x3))
-                AppText("Ver pedido", modifier = Modifier.weight(1f), style = AppTheme.type.title, color = colors.onPrimary, maxLines = 1)
-                AnimatedMoney(state.totalCents, style = AppTheme.type.title, color = colors.onPrimary)
-                Spacer(Modifier.width(Space.x2))
-                DinerIcon(AppIcons.ChevronRight, tint = colors.onPrimary, size = 18.dp)
-            }
+        Column(Modifier.fillMaxWidth().edgeTop(colors.line).padding(top = Space.x3)) {
+            TotalsRow("Subtotal · " + dishCount(state.itemCount), state.subtotalCents)
+            if (state.deliveryFeeCents > 0) TotalsRow("Envío", state.deliveryFeeCents)
+            if (state.tipCents > 0) TotalsRow("Propina (${state.tipPercent}%)", state.tipCents)
         }
     }
 }

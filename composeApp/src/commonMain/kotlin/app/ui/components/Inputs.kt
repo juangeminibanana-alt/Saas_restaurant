@@ -2,8 +2,8 @@ package app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -14,10 +14,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -31,7 +29,9 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,27 +40,37 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.ui.theme.AppTheme
 import app.ui.theme.Motion
+import app.ui.theme.Sizes
 import app.ui.theme.Space
+import kotlinx.coroutines.launch
 
-/** Campo de texto: etiqueta arriba, borde que se enciende en el color de marca al enfocar, error animado. */
+/**
+ * Campo de texto de NOCHE: etiqueta en mono MAYÚSCULAS arriba, superficie + filete de 1 px, radio 12, 48 de alto.
+ * Al enfocar, el filete pasa a tinta (nunca a brasa); con error, a rojo y el mensaje aparece debajo.
+ */
 @Composable
 fun AppTextField(
     value: String,
@@ -82,34 +92,33 @@ fun AppTextField(
     val hasError = !error.isNullOrBlank()
     var reveal by remember { mutableStateOf(false) }
     val multiline = !singleLine || minLines > 1
-    // Un campo de varias líneas en forma de cápsula se ve mal: usa el radio pequeño.
-    val shape = if (multiline) AppTheme.shapes.sm else AppTheme.shapes.control
+    val shape = AppTheme.shapes.md
 
-    val borderColor by animateColorAsState(
+    val ring by animateColorAsState(
         when {
             hasError -> colors.danger
-            focused -> colors.primary
-            else -> colors.lineStrong
+            focused -> colors.ink
+            else -> colors.line
         },
-        tween(Motion.BASE),
+        tween(Motion.FAST),
     )
-    val borderWidth by animateDpAsState(if (focused || hasError) 1.75.dp else 1.dp, tween(Motion.BASE))
-    val halo by animateFloatAsState(if (focused && enabled) 1f else 0f, tween(Motion.BASE))
     val labelColor by animateColorAsState(
         when {
             hasError -> colors.danger
             focused -> colors.ink
-            else -> colors.inkMuted
+            else -> colors.inkSubtle
         },
-        tween(Motion.BASE),
+        tween(Motion.FAST),
     )
-    val textStyle = AppTheme.type.body.copy(color = if (enabled) colors.ink else colors.inkSubtle)
-    val haloColor = (if (hasError) colors.danger else colors.primary).copy(alpha = if (colors.isDark) 0.22f else 0.13f)
+    // Una sola línea: 16/20 para que el texto quede centrado en 48; varias líneas: 16/24.
+    val fieldStyle = if (multiline) AppTheme.type.body else AppTheme.type.body.copy(lineHeight = 20.sp)
+    val textStyle = fieldStyle.copy(color = if (enabled) colors.ink else colors.inkSubtle)
+    val fill = AppTheme.controlFill
 
     Column(modifier) {
         if (label != null) {
-            AppText(label, style = AppTheme.type.label, color = labelColor, maxLines = 1)
-            Spacer(Modifier.height(6.dp))
+            LabelText(label, color = labelColor)
+            Spacer(Modifier.height(Space.x2))
         }
         BasicTextField(
             value = value,
@@ -122,43 +131,33 @@ fun AppTextField(
             keyboardOptions = KeyboardOptions(keyboardType = if (isPassword) KeyboardType.Password else keyboardType),
             visualTransformation = if (isPassword && !reveal) PasswordVisualTransformation() else VisualTransformation.None,
             interactionSource = interaction,
-            cursorBrush = SolidColor(colors.primary),
+            cursorBrush = SolidColor(colors.ink),
             decorationBox = { inner ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .drawBehind {
-                            // Halo de enfoque: anillo suave alrededor del campo.
-                            if (halo > 0f) {
-                                val grow = 3.dp.toPx() * halo
-                                val outline = shape.createOutline(
-                                    Size(size.width + grow * 2, size.height + grow * 2), layoutDirection, this,
-                                )
-                                translate(-grow, -grow) { drawOutline(outline, haloColor.copy(alpha = haloColor.alpha * halo)) }
-                            }
-                        }
-                        .background(if (enabled) colors.surface else colors.surfaceSunken, shape)
-                        .border(borderWidth, borderColor, shape)
-                        .defaultMinSize(minHeight = 48.dp)
-                        .padding(horizontal = if (multiline) 14.dp else 16.dp, vertical = if (multiline) 12.dp else 0.dp),
+                        .background(fill, shape)
+                        .border(1.dp, ring, shape)
+                        .defaultMinSize(minHeight = Sizes.controlLg)
+                        .padding(horizontal = Space.x4, vertical = if (multiline) Space.x3 else 0.dp),
                     verticalAlignment = if (multiline) Alignment.Top else Alignment.CenterVertically,
                 ) {
                     if (leadingIcon != null) {
-                        IconGlyph(leadingIcon, tint = if (focused) colors.ink else colors.inkSubtle, size = 18.dp)
-                        Spacer(Modifier.width(10.dp))
+                        IconGlyph(leadingIcon, tint = if (focused) colors.ink else colors.inkSubtle, size = Sizes.icon)
+                        Spacer(Modifier.width(Space.x3))
                     }
                     Box(Modifier.weight(1f), contentAlignment = if (multiline) Alignment.TopStart else Alignment.CenterStart) {
                         if (value.isEmpty() && placeholder.isNotEmpty()) {
-                            AppText(placeholder, style = AppTheme.type.body, color = colors.inkSubtle, maxLines = if (multiline) 3 else 1)
+                            AppText(placeholder, style = fieldStyle, color = colors.inkSubtle, maxLines = if (multiline) 3 else 1)
                         }
                         inner()
                     }
                     if (isPassword) {
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(Space.x2))
                         Box(
                             Modifier
-                                .size(32.dp)
-                                .clip(AppTheme.shapes.pill)
+                                .size(Sizes.controlSm)
+                                .clip(AppTheme.shapes.sm)
                                 .pointerHoverIcon(PointerIcon.Hand)
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
@@ -168,7 +167,7 @@ fun AppTextField(
                                 ) { reveal = !reveal },
                             contentAlignment = Alignment.Center,
                         ) {
-                            IconGlyph(AppIcons.Eye, tint = if (reveal) colors.primary else colors.inkSubtle, size = 18.dp)
+                            IconGlyph(AppIcons.Eye, tint = if (reveal) colors.ink else colors.inkSubtle, size = Sizes.icon)
                         }
                     }
                 }
@@ -181,7 +180,7 @@ fun AppTextField(
         ) {
             AppText(
                 text = error.orEmpty(),
-                modifier = Modifier.padding(top = 6.dp, start = 2.dp),
+                modifier = Modifier.padding(top = Space.x2),
                 style = AppTheme.type.bodySm,
                 color = colors.danger,
                 maxLines = 2,
@@ -190,24 +189,24 @@ fun AppTextField(
     }
 }
 
-/** Interruptor con pulgar animado por resorte. */
+/**
+ * Interruptor plano de 44 × 24. Encendido: pista en tinta sólida con el pulgar oscuro (la selección es tinta,
+ * no brasa). Apagado: superficie + filete con el pulgar gris.
+ */
 @Composable
 fun AppSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     val colors = AppTheme.colors
     val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val track by animateColorAsState(if (checked) colors.primary else colors.lineStrong, tween(Motion.BASE))
-    val thumbColor by animateColorAsState(
-        if (checked) colors.onPrimary else if (colors.isDark) colors.ink else Color.White,
-        tween(Motion.BASE),
-    )
-    val thumbWidth by animateDpAsState(if (pressed && enabled) 27.dp else 22.dp, Motion.snappy())
-    val thumbX by animateDpAsState(if (checked) 46.dp - 3.dp - thumbWidth else 3.dp, Motion.snappy())
+    val trackShape = AppTheme.shapes.md
+    val track by animateColorAsState(if (checked) colors.select else colors.surfaceRaised, tween(Motion.FAST))
+    val ring by animateColorAsState(if (checked) Color.Transparent else colors.lineStrong, tween(Motion.FAST))
+    val thumbColor by animateColorAsState(if (checked) colors.onSelect else colors.inkMuted, tween(Motion.FAST))
+    val thumbX by animateDpAsState(if (checked) 24.dp else 4.dp, Motion.snappy())
 
     Box(
         modifier = modifier
-            .size(width = 46.dp, height = 28.dp)
-            .alpha(if (enabled) 1f else 0.45f)
+            .size(width = 44.dp, height = 24.dp)
+            .alpha(if (enabled) 1f else 0.4f)
             .then(if (enabled) Modifier.pointerHoverIcon(PointerIcon.Hand) else Modifier)
             .toggleable(
                 value = checked,
@@ -217,77 +216,114 @@ fun AppSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Mo
                 role = Role.Switch,
                 onValueChange = onCheckedChange,
             )
-            .background(track, AppTheme.shapes.pill),
+            .background(track, trackShape)
+            .border(1.dp, ring, trackShape),
         contentAlignment = Alignment.CenterStart,
     ) {
-        Box(
-            Modifier
-                .offset(x = thumbX)
-                .size(width = thumbWidth, height = 22.dp)
-                .softShadow(AppTheme.shapes.pill, Color.Black, blur = 6.dp, offsetY = 2.dp, alpha = if (colors.isDark) 0f else 0.16f)
-                .background(thumbColor, AppTheme.shapes.pill),
-        )
+        Box(Modifier.offset(x = thumbX).size(16.dp).background(thumbColor, AppTheme.shapes.sm))
     }
 }
 
-/** Control segmentado: la pastilla seleccionada se desliza entre opciones. */
+/**
+ * Control segmentado de NOCHE: riel de superficie + filete (radio 12, 44 de alto) y, 4 px adentro, la pastilla
+ * activa en tinta sólida con texto oscuro (radio 8). Cada segmento mide lo que su texto y el sobrante se
+ * reparte por igual, así que las etiquetas largas no se cortan; el ancho de cada uno se reserva en seminegrita
+ * para que activar uno no mueva a los vecinos.
+ * [large]: 48 de alto y cuerpo 16, para elecciones del platillo (término, tamaño…).
+ */
 @Composable
-fun SegmentedControl(options: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun SegmentedControl(
+    options: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    large: Boolean = false,
+) {
     val colors = AppTheme.colors
-    val shape = AppTheme.shapes.control
-    val count = options.size.coerceAtLeast(1)
-    val position by animateFloatAsState(selectedIndex.coerceIn(0, count - 1).toFloat(), Motion.snappy())
-    val pillColor = if (colors.isDark) colors.surfaceRaised else colors.surface
-    val pillBorder = if (colors.isDark) colors.lineStrong else colors.line
-    val isDark = colors.isDark
+    val shape = AppTheme.shapes.md
+    val pillShape = AppTheme.shapes.sm
+    val pillColor = colors.select
+    val height = if (large) Sizes.controlLg else Sizes.control
+    val padH = if (large) Space.x1 + Space.x1 else Space.x3
+    val regular = if (large) AppTheme.type.title else AppTheme.type.bodySm.copy(fontWeight = FontWeight.Medium)
+    val strong = regular.copy(fontWeight = FontWeight.SemiBold)
 
-    Row(
+    // índice -> (x, ancho) en px dentro del riel; la pastilla se desliza hasta el segmento activo
+    val bounds = remember { mutableStateMapOf<Int, Pair<Float, Float>>() }
+    val left = remember { Animatable(0f) }
+    val width = remember { Animatable(0f) }
+    var placed by remember { mutableStateOf(false) }
+    val target = bounds[selectedIndex.coerceIn(0, (options.size - 1).coerceAtLeast(0))]
+    LaunchedEffect(target) {
+        val t = target ?: return@LaunchedEffect
+        if (!placed) {
+            left.snapTo(t.first)
+            width.snapTo(t.second)
+            placed = true
+        } else {
+            launch { left.animateTo(t.first, Motion.snappy()) }
+            launch { width.animateTo(t.second, Motion.snappy()) }
+        }
+    }
+
+    Layout(
         modifier = modifier
-            .height(IntrinsicSize.Min)
-            .defaultMinSize(minHeight = 44.dp)
-            .background(colors.surfaceSunken, shape)
+            .height(height)
+            .background(AppTheme.controlFill, shape)
             .border(1.dp, colors.line, shape)
             .drawBehind {
-                val pad = 4.dp.toPx()
-                val segW = (size.width - pad * 2) / count
-                val segSize = Size(segW, size.height - pad * 2)
-                val outline = shape.createOutline(segSize, layoutDirection, this)
-                translate(pad + segW * position, pad) {
-                    if (!isDark) {
-                        // sombra corta bajo la pastilla
-                        translate(0f, 1.5.dp.toPx()) { drawOutline(outline, Color.Black.copy(alpha = 0.07f)) }
-                    }
-                    drawOutline(outline, pillColor)
-                    drawOutline(outline, pillBorder, style = Stroke(1.dp.toPx()))
+                if (width.value > 0f) {
+                    val pad = 4.dp.toPx()
+                    val pill = Size((width.value - pad * 2).coerceAtLeast(0f), size.height - pad * 2)
+                    val outline = pillShape.createOutline(pill, layoutDirection, this)
+                    translate(left.value + pad, pad) { drawOutline(outline, pillColor) }
+                }
+            },
+        content = {
+            options.forEachIndexed { index, option ->
+                val selected = index == selectedIndex
+                val textColor by animateColorAsState(if (selected) colors.onSelect else colors.inkMuted, tween(Motion.FAST))
+                Box(
+                    modifier = Modifier
+                        .onPlaced { coords ->
+                            val next = coords.positionInParent().x to coords.size.width.toFloat()
+                            if (bounds[index] != next) bounds[index] = next
+                        }
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.Tab,
+                        ) { if (!selected) onSelect(index) }
+                        .padding(horizontal = padH),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppText(option, modifier = Modifier.alpha(0f).clearAndSetSemantics { }, style = strong, maxLines = 1)
+                    AppText(option, style = if (selected) strong else regular, color = textColor, maxLines = 1, textAlign = TextAlign.Center)
                 }
             }
-            .padding(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        options.forEachIndexed { index, option ->
-            val selected = index == selectedIndex
-            val textColor by animateColorAsState(if (selected) colors.ink else colors.inkMuted, tween(Motion.BASE))
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .defaultMinSize(minHeight = 36.dp)
-                    .clip(shape)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        role = Role.Tab,
-                    ) { if (!selected) onSelect(index) }
-                    .padding(horizontal = Space.x3),
-                contentAlignment = Alignment.Center,
-            ) {
-                AppText(
-                    text = option,
-                    style = AppTheme.type.bodySm.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium),
-                    color = textColor,
-                    maxLines = 1,
-                    textAlign = TextAlign.Center,
-                )
+        },
+    ) { measurables, constraints ->
+        val n = measurables.size
+        val h = if (constraints.hasBoundedHeight) constraints.maxHeight else height.roundToPx()
+        if (n == 0) return@Layout layout(constraints.minWidth, h) { }
+        // Como `flex: 1 0 auto`: base = ancho del contenido; el sobrante se reparte por igual.
+        val natural = IntArray(n) { measurables[it].maxIntrinsicWidth(h) }
+        val total = natural.sum()
+        val w = if (constraints.hasBoundedWidth) constraints.maxWidth else total.coerceAtLeast(constraints.minWidth)
+        val widths = IntArray(n)
+        var used = 0
+        for (i in 0 until n) {
+            widths[i] = if (total <= w) natural[i] + (w - total) / n else (natural[i].toLong() * w / total.coerceAtLeast(1)).toInt()
+            used += widths[i]
+        }
+        widths[n - 1] += w - used
+        val placeables = measurables.mapIndexed { i, m -> m.measure(Constraints.fixed(widths[i].coerceAtLeast(0), h)) }
+        layout(w, h) {
+            var x = 0
+            placeables.forEach { p ->
+                p.placeRelative(x, 0)
+                x += p.width
             }
         }
     }

@@ -33,13 +33,14 @@ fun QrCode(content: String, modifier: Modifier = Modifier, size: Dp = 168.dp) {
     }
     Canvas(modifier.size(size).semantics { contentDescription = "Código QR" }) {
         val side = this.size.minDimension
-        drawRoundRect(Color.White, size = Size(side, side), cornerRadius = CornerRadius(side * 0.06f, side * 0.06f))
+        val radius = 8.dp.toPx() // radio sm del sistema
+        drawRoundRect(Color.White, size = Size(side, side), cornerRadius = CornerRadius(radius, radius))
         if (matrix == null) return@Canvas
         val n = matrix.size
         val quiet = 4
         val cell = side / (n + quiet * 2)
         val origin = cell * quiet
-        val dark = Color(0xFF0B0B09)
+        val dark = Color(0xFF0B0B0C) // el negro de NOCHE; siempre sobre blanco para que cualquier cámara lo lea
         for (row in 0 until n) {
             val line = matrix[row]
             val top = floor(origin + row * cell)

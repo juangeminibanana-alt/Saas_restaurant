@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -30,6 +31,7 @@ import app.ui.components.ButtonVariant
 import app.ui.components.EmptyState
 import app.ui.components.ErrorState
 import app.ui.components.LineChart
+import app.ui.components.LabelText
 import app.ui.components.PageHeader
 import app.ui.components.pressable
 import app.ui.components.Skeleton
@@ -43,7 +45,7 @@ import app.ui.theme.WindowSize
 private data class OverviewStat(
     val label: String,
     val value: String,
-    val icon: ImageVector,
+    val icon: ImageVector? = null,
     val delta: String? = null,
     val deltaPositive: Boolean = true,
     val series: List<Double>? = null,
@@ -72,31 +74,33 @@ internal fun OverviewSection(store: OperatorStore, onReload: () -> Unit, onOpenT
 @Composable
 private fun StatGrid(m: OperatorMetrics) {
     val stats = listOf(
+        // Etiquetas cortas (caben en media pantalla de teléfono) y sin ícono: la cifra en mono es el dato.
         OverviewStat(
-            "Ingreso recurrente (MRR)", formatMoneyCompact(m.mrrCents), AppIcons.Wallet,
-            delta = formatSignedPct(m.mrrDeltaPct) + " vs. mes anterior",
+            "Recurrente al mes", formatMoneyCompact(m.mrrCents),
+            delta = formatSignedPct(m.mrrDeltaPct),
             deltaPositive = m.mrrDeltaPct >= 0,
             series = m.mrrSeries.map { it.value }.takeIf { it.size >= 2 },
         ),
-        OverviewStat("Restaurantes activos", formatCount(m.activeTenants), AppIcons.Store),
-        OverviewStat("En prueba", formatCount(m.trialTenants), AppIcons.Sparkle),
-        OverviewStat("Cancelación mensual", formatPct(m.churnPct), AppIcons.Chart),
-        OverviewStat("Activación", formatPct(m.activationPct), AppIcons.Check),
-        OverviewStat("Ventas procesadas · 30 días", formatMoneyCompact(m.gmv30dCents), AppIcons.Cash),
-        OverviewStat("Comisiones · 30 días", formatMoneyCompact(m.platformFees30dCents), AppIcons.Bank),
-        OverviewStat("Pedidos · 30 días", formatCount(m.orders30d), AppIcons.Receipt),
+        OverviewStat("Activos", formatCount(m.activeTenants)),
+        OverviewStat("En prueba", formatCount(m.trialTenants)),
+        OverviewStat("Cancelación", formatPct(m.churnPct)),
+        OverviewStat("Activación", formatPct(m.activationPct)),
+        OverviewStat("Ventas · 30 d", formatMoneyCompact(m.gmv30dCents)),
+        OverviewStat("Comisiones · 30 d", formatMoneyCompact(m.platformFees30dCents)),
+        OverviewStat("Pedidos · 30 d", formatCount(m.orders30d)),
     )
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val columns = when {
             maxWidth >= 880.dp -> 4
-            maxWidth >= 420.dp -> 2
+            maxWidth >= 300.dp -> 2
             else -> 1
         }
-        OpGrid(stats, columns) { s ->
+        // Bento de cifras: mosaicos de la misma altura por fila.
+        OpGrid(stats, columns, equalHeight = true) { s ->
             StatCard(
                 label = s.label,
                 value = s.value,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 delta = s.delta,
                 deltaPositive = s.deltaPositive,
                 icon = s.icon,
@@ -110,7 +114,7 @@ private fun StatGrid(m: OperatorMetrics) {
 private fun ChartsRow(m: OperatorMetrics) {
     val expanded = LocalWindowSize.current == WindowSize.EXPANDED
     if (expanded) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x4)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
             MrrChart(m, Modifier.weight(1.6f))
             SignupsChart(m, Modifier.weight(1f))
         }
@@ -130,13 +134,13 @@ private fun ChartPanel(
     chart: @Composable (Modifier) -> Unit,
 ) {
     OpPanel(modifier) {
-        Column(Modifier.fillMaxWidth().padding(Space.x5), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
+        Column(Modifier.fillMaxWidth().padding(Space.x4), verticalArrangement = Arrangement.spacedBy(Space.x4)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Space.x1)) {
-                    AppText(title, style = AppTheme.type.title)
+                    AppText(title, style = AppTheme.type.h2)
                     AppText(caption, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted)
                 }
-                AppText(headline, style = AppTheme.type.h3)
+                AppText(headline, style = AppTheme.type.monoLg, maxLines = 1)
             }
             if (points.isEmpty()) {
                 Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
@@ -178,14 +182,14 @@ private fun RecentTenants(tenants: List<TenantSummary>, onOpenTenants: () -> Uni
     val compact = LocalWindowSize.current == WindowSize.COMPACT
     OpPanel(Modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().padding(start = Space.x5, end = Space.x3, top = Space.x4, bottom = Space.x3),
+            Modifier.fillMaxWidth().padding(start = Space.x4, end = Space.x4, top = Space.x4, bottom = Space.x3),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Space.x1)) {
-                AppText("Restaurantes recientes", style = AppTheme.type.title)
+                AppText("Restaurantes recientes", style = AppTheme.type.h2)
                 AppText("Las altas más nuevas de la plataforma", style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted)
             }
-            AppButton("Ver todos", onClick = onOpenTenants, variant = ButtonVariant.GHOST, size = ButtonSize.SM, icon = AppIcons.ChevronRight)
+            AppButton("Ver todos", onClick = onOpenTenants, variant = ButtonVariant.SECONDARY, size = ButtonSize.SM, trailingIcon = AppIcons.Forward)
         }
         AppDivider()
         if (recent.isEmpty()) {
@@ -199,26 +203,22 @@ private fun RecentTenants(tenants: List<TenantSummary>, onOpenTenants: () -> Uni
             )
         } else {
             recent.forEachIndexed { index, t ->
-                if (index > 0) AppDivider(Modifier.padding(horizontal = Space.x5))
+                if (index > 0) AppDivider()
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .pressable(scale = 0.995f, onClick = onOpenTenants)
-                        .padding(horizontal = Space.x5, vertical = Space.x3),
+                        .padding(horizontal = Space.x4, vertical = Space.x3),
                     horizontalArrangement = Arrangement.spacedBy(Space.x3),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TenantMonogram(t.name, t.primary)
                     Column(Modifier.weight(1f)) {
                         AppText(t.name, style = AppTheme.type.title, maxLines = 1)
-                        AppText(
-                            "${t.planName} · /r/${t.slug}",
-                            style = AppTheme.type.bodySm,
-                            color = AppTheme.colors.inkMuted,
-                            maxLines = 1,
-                        )
+                        AppText("/r/${t.slug}", style = AppTheme.type.mono, color = AppTheme.colors.inkMuted, maxLines = 1)
                     }
                     if (!compact) {
+                        LabelText(t.planName, Modifier.width(96.dp))
                         AppText(
                             relativeTime(t.createdAt),
                             Modifier.width(96.dp),
@@ -239,7 +239,7 @@ private fun OverviewSkeleton() {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val columns = when {
             maxWidth >= 880.dp -> 4
-            maxWidth >= 420.dp -> 2
+            maxWidth >= 300.dp -> 2
             else -> 1
         }
         OpGrid((1..8).toList(), columns) {

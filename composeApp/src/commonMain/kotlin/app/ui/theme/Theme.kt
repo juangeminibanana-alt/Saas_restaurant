@@ -1,8 +1,5 @@
 package app.ui.theme
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
@@ -10,7 +7,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
@@ -24,127 +20,91 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.resources.Res
-import app.resources.fraunces_bold
-import app.resources.fraunces_regular
-import app.resources.fraunces_semibold
-import app.resources.inter_bold
-import app.resources.inter_medium
-import app.resources.inter_regular
-import app.resources.inter_semibold
-import app.resources.nunito_extrabold
-import app.resources.nunito_regular
-import app.resources.nunito_semibold
-import app.resources.space_grotesk_bold
-import app.resources.space_grotesk_medium
-import app.resources.space_grotesk_regular
+import app.resources.geist_medium
+import app.resources.geist_mono_medium
+import app.resources.geist_mono_semibold
+import app.resources.geist_regular
+import app.resources.geist_semibold
 import app.shared.model.BrandTheme
-import app.shared.model.FontChoice
-import app.shared.model.RadiusStyle
-import app.shared.model.ThemeMode
 import org.jetbrains.compose.resources.Font
 
-// ───────────────────────── Paletas base ─────────────────────────
+// ───────────────────────── NOCHE: color ─────────────────────────
+// La interfaz es negra, plana y exacta; la fotografía es lo único que brilla.
 
-private val InkLight = Color(0xFF0B0B0F)
-private val InkDark = Color(0xFFF5F5F7)
+private val Bg = Color(0xFF0B0B0C)                // fondo
+private val Surface1 = Color(0xFF141416)          // controles, mosaicos, barra
+private val Surface2 = Color(0xFF1B1B1E)          // control sobre superficie 1
+private val Line = Color(0x14FFFFFF)              // filete: blanco al 8 %
+private val LineStrong = Color(0x24FFFFFF)        // filete sobre fotografía: blanco al 14 %
+private val Ink = Color(0xFFF2F2F3)               // texto principal   17.6 : 1
+private val Muted = Color(0xFFA1A1A8)             // texto secundario   7.6 : 1
+private val Faint = Color(0xFF8A8A92)             // etiquetas          5.6 : 1
+private val Positive = Color(0xFF3ECF8E)          // "abierto" / correcto
+private val Warning = Color(0xFFF2B84B)           // sólo paneles: atención
+private val Danger = Color(0xFFF2555A)            // sólo paneles: error / destructivo
+private val Info = Color(0xFF6CB4FF)              // sólo paneles: informativo
+private val Scrim = Color(0x99000000)             // velo de diálogos y hojas: negro al 60 %
 
-private fun lightPalette(brandPrimary: Color?): AppColors {
-    val surface = Color(0xFFFFFFFF)
-    var primary = brandPrimary ?: Color(0xFFFF5B2E) // acento por defecto de la plataforma (Obsidiana)
-    // Un color de marca casi blanco no se vería sobre papel: se oscurece lo justo.
-    if (primary.luminance() > 0.78f) {
-        var t = 0f
-        while (t < 1f && lerp(primary, InkLight, t).luminance() > 0.6f) t += 0.05f
-        primary = lerp(primary, InkLight, t)
+/** Brasa del restaurante de demostración; es el acento cuando el tenant no define el suyo. */
+val DefaultAccent = Color(0xFFFF6A3D)
+
+private fun contrast(a: Color, b: Color): Float {
+    val la = a.luminance()
+    val lb = b.luminance()
+    return (maxOf(la, lb) + 0.05f) / (minOf(la, lb) + 0.05f)
+}
+
+/** Texto sobre un color sólido: tinta oscura sobre un color luminoso, tinta clara sobre uno profundo. */
+internal fun contentColorOn(background: Color): Color =
+    if (contrast(background, Bg) >= contrast(background, Ink)) Bg else Ink
+
+/** El acento del tenant debe verse sobre negro: uno demasiado oscuro se aclara hasta 3 : 1 contra el fondo. */
+private fun accentFor(brand: Color?): Color {
+    var accent = (brand ?: DefaultAccent).copy(alpha = 1f)
+    var t = 0f
+    while (t < 1f && contrast(accent, Bg) < 3f) {
+        t += 0.04f
+        accent = lerp(brand ?: DefaultAccent, Color.White, t).copy(alpha = 1f)
     }
-    val success = Color(0xFF0F9D6B)
-    val warning = Color(0xFFB45309)
-    val danger = Color(0xFFDC2626)
-    val info = Color(0xFF2563EB)
-    return AppColors(
-        canvas = Color(0xFFF7F7F5), surface = surface, surfaceRaised = Color(0xFFFFFFFF), surfaceSunken = Color(0xFFEDEDEA),
-        line = Color(0xFFE2E2DD), lineStrong = Color(0xFFC9C9C2),
-        ink = InkLight, inkMuted = Color(0xFF4B4B57), inkSubtle = Color(0xFF6B6B78),
-        primary = primary, onPrimary = contentColorOn(primary), primarySoft = primary.copy(alpha = 0.10f).compositeOver(surface),
-        success = success, warning = warning, danger = danger, info = info,
-        successSoft = success.copy(alpha = 0.11f).compositeOver(surface),
-        warningSoft = warning.copy(alpha = 0.13f).compositeOver(surface),
-        dangerSoft = danger.copy(alpha = 0.10f).compositeOver(surface),
-        infoSoft = info.copy(alpha = 0.10f).compositeOver(surface),
-        scrim = InkLight.copy(alpha = 0.42f), isDark = false,
-    )
+    return accent
 }
 
-private fun darkPalette(brandPrimary: Color?): AppColors {
-    val surface = Color(0xFF0E0E13)
-    var primary = brandPrimary ?: Color(0xFFFF5B2E) // acento por defecto de la plataforma (Obsidiana)
-    // Un color de marca demasiado oscuro se pierde sobre fondos casi negros: se aclara hasta ser visible.
-    if (primary.luminance() < 0.2f) {
-        var t = 0f
-        while (t < 1f && lerp(primary, Color.White, t).luminance() < 0.2f) t += 0.04f
-        primary = lerp(primary, Color.White, t)
-    }
-    val success = Color(0xFF34D399)
-    val warning = Color(0xFFFBBF24)
-    val danger = Color(0xFFF87171)
-    val info = Color(0xFF60A5FA)
-    return AppColors(
-        canvas = Color(0xFF07070A), surface = surface, surfaceRaised = Color(0xFF15151C), surfaceSunken = Color(0xFF050507),
-        line = Color(0xFF262631), lineStrong = Color(0xFF3A3A48),
-        ink = InkDark, inkMuted = Color(0xFFB4B4C2), inkSubtle = Color(0xFF7C7C8E),
-        primary = primary, onPrimary = contentColorOn(primary), primarySoft = primary.copy(alpha = 0.16f).compositeOver(surface),
-        success = success, warning = warning, danger = danger, info = info,
-        successSoft = success.copy(alpha = 0.16f).compositeOver(surface),
-        warningSoft = warning.copy(alpha = 0.16f).compositeOver(surface),
-        dangerSoft = danger.copy(alpha = 0.16f).compositeOver(surface),
-        infoSoft = info.copy(alpha = 0.16f).compositeOver(surface),
-        scrim = Color.Black.copy(alpha = 0.62f), isDark = true,
-    )
-}
+/** Tinte plano y opaco de un color sobre superficie 1 (nunca translúcido, nunca degradado). */
+private fun flatTint(color: Color): Color = color.copy(alpha = 0.14f).compositeOver(Surface1)
 
-/** Blanco o casi negro según contraste (blanco mientras cumpla ≥ 3:1, texto en negritas / UI). */
-internal fun contentColorOn(background: Color): Color {
-    val contrastWithWhite = 1.05f / (background.luminance() + 0.05f)
-    return if (contrastWithWhite >= 4.5f) Color.White else InkLight
-}
+private fun nochePalette(accent: Color): AppColors = AppColors(
+    canvas = Bg, surface = Surface1, surfaceRaised = Surface2, surfaceSunken = Surface2,
+    line = Line, lineStrong = LineStrong,
+    ink = Ink, inkMuted = Muted, inkSubtle = Faint,
+    primary = accent, onPrimary = contentColorOn(accent), primarySoft = flatTint(accent),
+    success = Positive, warning = Warning, danger = Danger, info = Info,
+    successSoft = flatTint(Positive), warningSoft = flatTint(Warning),
+    dangerSoft = flatTint(Danger), infoSoft = flatTint(Info),
+    scrim = Scrim, isDark = true,
+    select = Ink, onSelect = Bg,
+    positive = Positive,
+)
 
-// ───────────────────────── Tipografía ─────────────────────────
+// ───────────────────────── NOCHE: tipografía ─────────────────────────
+// Geist (400/500/600) para todo; Geist Mono (500/600) para precios, conteos, horas y etiquetas de 11.
 
 @Composable
-private fun fontFamilyFor(choice: FontChoice): FontFamily = when (choice) {
-    FontChoice.INTER -> {
-        val r = Font(Res.font.inter_regular, FontWeight.Normal)
-        val m = Font(Res.font.inter_medium, FontWeight.Medium)
-        val s = Font(Res.font.inter_semibold, FontWeight.SemiBold)
-        val b = Font(Res.font.inter_bold, FontWeight.Bold)
-        remember(r, m, s, b) { FontFamily(r, m, s, b) }
-    }
-    FontChoice.FRAUNCES -> {
-        val r = Font(Res.font.fraunces_regular, FontWeight.Normal)
-        val m = Font(Res.font.fraunces_semibold, FontWeight.Medium)
-        val s = Font(Res.font.fraunces_semibold, FontWeight.SemiBold)
-        val b = Font(Res.font.fraunces_bold, FontWeight.Bold)
-        remember(r, m, s, b) { FontFamily(r, m, s, b) }
-    }
-    FontChoice.SPACE_GROTESK -> {
-        val r = Font(Res.font.space_grotesk_regular, FontWeight.Normal)
-        val m = Font(Res.font.space_grotesk_medium, FontWeight.Medium)
-        val s = Font(Res.font.space_grotesk_bold, FontWeight.SemiBold)
-        val b = Font(Res.font.space_grotesk_bold, FontWeight.Bold)
-        remember(r, m, s, b) { FontFamily(r, m, s, b) }
-    }
-    FontChoice.NUNITO -> {
-        val r = Font(Res.font.nunito_regular, FontWeight.Normal)
-        val m = Font(Res.font.nunito_semibold, FontWeight.Medium)
-        val s = Font(Res.font.nunito_semibold, FontWeight.SemiBold)
-        val b = Font(Res.font.nunito_extrabold, FontWeight.Bold)
-        val x = Font(Res.font.nunito_extrabold, FontWeight.ExtraBold)
-        remember(r, m, s, b, x) { FontFamily(r, m, s, b, x) }
-    }
+private fun geistSans(): FontFamily {
+    val r = Font(Res.font.geist_regular, FontWeight.Normal)
+    val m = Font(Res.font.geist_medium, FontWeight.Medium)
+    val s = Font(Res.font.geist_semibold, FontWeight.SemiBold)
+    return remember(r, m, s) { FontFamily(r, m, s) }
+}
+
+@Composable
+private fun geistMono(): FontFamily {
+    val m = Font(Res.font.geist_mono_medium, FontWeight.Medium)
+    val s = Font(Res.font.geist_mono_semibold, FontWeight.SemiBold)
+    return remember(m, s) { FontFamily(m, s) }
 }
 
 private val CenteredLines = LineHeightStyle(
@@ -152,61 +112,49 @@ private val CenteredLines = LineHeightStyle(
     trim = LineHeightStyle.Trim.None,
 )
 
-private fun buildTypography(display: FontFamily, body: FontFamily, displayChoice: FontChoice): AppTypography {
-    // La serif se ve más fina en semibold; las sans piden bold para titulares.
-    val heavy = if (displayChoice == FontChoice.FRAUNCES) FontWeight.SemiBold else FontWeight.Bold
-    val tracking = if (displayChoice == FontChoice.FRAUNCES) 0.6f else 1f
-    fun displayStyle(size: Int, line: Int, weight: FontWeight, letter: Float) = TextStyle(
-        fontFamily = display, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp,
-        letterSpacing = (letter * tracking).sp, lineHeightStyle = CenteredLines,
-    )
-    fun bodyStyle(size: Int, line: Int, weight: FontWeight, letter: Float) = TextStyle(
-        fontFamily = body, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp,
-        letterSpacing = letter.sp, lineHeightStyle = CenteredLines,
-        fontFeatureSettings = "tnum", // cifras tabulares: precios y totales alineados
+/** Escala 40 · 32 · 20 · 16 · 15 · 13 · 11; interlíneas en múltiplos de 4; tracking cerrado en lo grande. */
+private fun buildTypography(sans: FontFamily, mono: FontFamily): AppTypography {
+    fun style(family: FontFamily, size: Int, line: Int, weight: FontWeight, trackingEm: Float) = TextStyle(
+        fontFamily = family, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp,
+        letterSpacing = trackingEm.em, lineHeightStyle = CenteredLines,
     )
     return AppTypography(
-        display = displayStyle(44, 48, heavy, -1.1f),
-        h1 = displayStyle(32, 38, heavy, -0.7f),
-        h2 = displayStyle(24, 30, FontWeight.SemiBold, -0.4f),
-        h3 = displayStyle(20, 26, FontWeight.SemiBold, -0.25f),
-        title = bodyStyle(17, 24, FontWeight.SemiBold, -0.15f),
-        body = bodyStyle(15, 22, FontWeight.Normal, 0f),
-        bodySm = bodyStyle(13, 18, FontWeight.Normal, 0f),
-        label = bodyStyle(12, 16, FontWeight.Medium, 0.1f),
+        display = style(sans, 40, 44, FontWeight.SemiBold, -0.04f),     // nombre del restaurante
+        h1 = style(sans, 32, 36, FontWeight.SemiBold, -0.035f),         // nombre del platillo, título de página
+        h2 = style(sans, 20, 24, FontWeight.SemiBold, -0.02f),          // título de sección
+        h3 = style(sans, 16, 20, FontWeight.SemiBold, -0.011f),         // título de grupo, texto de botón
+        title = style(sans, 16, 20, FontWeight.Medium, -0.011f),        // nombre en fila o mosaico grande
+        body = style(sans, 16, 24, FontWeight.Normal, -0.011f),         // texto corrido
+        bodySm = style(sans, 13, 20, FontWeight.Normal, 0f),            // descripción, dato secundario
+        label = style(sans, 11, 16, FontWeight.Medium, 0.01f),          // nota mínima en sans
+        titleSm = style(sans, 15, 20, FontWeight.Medium, -0.015f),      // nombre en mosaico chico
+        monoLabel = style(mono, 11, 16, FontWeight.Medium, 0.06f),      // etiqueta en MAYÚSCULAS (LabelText)
+        mono = style(mono, 13, 20, FontWeight.Medium, 0f),              // precios, conteos, tiempos
+        monoMd = style(mono, 16, 20, FontWeight.Medium, -0.02f),        // precio en mosaico, cantidad grande
+        monoLg = style(mono, 20, 24, FontWeight.Medium, -0.02f),        // total, precio del platillo
     )
 }
 
-// ───────────────────────── Formas ─────────────────────────
+// ───────────────────────── NOCHE: radios ─────────────────────────
+// Un solo sistema: 4 / 8 / 12 / 16, interior = exterior − 4.
 
-private class RadiusSet(val xs: Dp, val sm: Dp, val md: Dp, val lg: Dp, val control: Dp?)
-
-private fun radiusSetFor(style: RadiusStyle): RadiusSet = when (style) {
-    RadiusStyle.SHARP -> RadiusSet(2.dp, 4.dp, 6.dp, 8.dp, 4.dp)
-    RadiusStyle.SOFT -> RadiusSet(6.dp, 10.dp, 14.dp, 18.dp, 10.dp)
-    RadiusStyle.ROUND -> RadiusSet(10.dp, 16.dp, 22.dp, 28.dp, 14.dp)
-    RadiusStyle.PILL -> RadiusSet(14.dp, 22.dp, 30.dp, 30.dp, null)
-}
-
-private fun buildShapes(r: RadiusSet): AppShapes = AppShapes(
-    xs = RoundedCornerShape(r.xs),
-    sm = RoundedCornerShape(r.sm),
-    md = RoundedCornerShape(r.md),
-    lg = RoundedCornerShape(r.lg),
-    control = if (r.control != null) RoundedCornerShape(r.control) else RoundedCornerShape(percent = 50),
-    pill = RoundedCornerShape(percent = 50),
+private val NocheShapes = AppShapes(
+    xs = RoundedCornerShape(4.dp),        // ficha dentro de un control de 8
+    sm = RoundedCornerShape(8.dp),        // segmento activo, botón de fila
+    md = RoundedCornerShape(12.dp),       // controles, miniaturas
+    lg = RoundedCornerShape(16.dp),       // mosaicos, tarjetas, diálogos
+    control = RoundedCornerShape(12.dp),
+    pill = RoundedCornerShape(8.dp),      // NOCHE no tiene cápsulas: alias heredado de sm
 )
 
 // ───────────────────────── Locals ─────────────────────────
 
-private val NeutralLight = lightPalette(null)
+private val FallbackColors = nochePalette(DefaultAccent)
+private val FallbackTypography = buildTypography(FontFamily.Default, FontFamily.Monospace)
 
-private val FallbackTypography = buildTypography(FontFamily.Default, FontFamily.Default, FontChoice.INTER)
-private val FallbackShapes = buildShapes(radiusSetFor(RadiusStyle.ROUND))
-
-internal val LocalAppColors = staticCompositionLocalOf { NeutralLight }
+internal val LocalAppColors = staticCompositionLocalOf { FallbackColors }
 internal val LocalAppTypography = staticCompositionLocalOf { FallbackTypography }
-internal val LocalAppShapes = staticCompositionLocalOf { FallbackShapes }
+internal val LocalAppShapes = staticCompositionLocalOf { NocheShapes }
 
 object AppTheme {
     val colors: AppColors
@@ -215,59 +163,40 @@ object AppTheme {
         @Composable @ReadOnlyComposable get() = LocalAppTypography.current
     val shapes: AppShapes
         @Composable @ReadOnlyComposable get() = LocalAppShapes.current
+
+    /**
+     * Relleno de un control (botón secundario, campo, stepper, chip) según dónde vive: superficie 1 sobre
+     * el fondo, superficie 2 dentro de una tarjeta, hoja o barra, y de vuelta superficie 1 si el contenedor
+     * ya es superficie 2. Nunca se funde con lo que lo contiene. Ver [LocalSurfaceLevel].
+     */
+    val controlFill: Color
+        @Composable @ReadOnlyComposable get() =
+            if (LocalSurfaceLevel.current == 1) LocalAppColors.current.surfaceRaised else LocalAppColors.current.surface
 }
 
 // ───────────────────────── AppTheme ─────────────────────────
 
-@Composable
-private fun animated(target: AppColors): AppColors {
-    val spec = remember { tween<Color>(durationMillis = Motion.SLOW, easing = Motion.standard) }
-
-    @Composable
-    fun a(c: Color): Color = animateColorAsState(c, spec).value
-    return AppColors(
-        canvas = a(target.canvas), surface = a(target.surface), surfaceRaised = a(target.surfaceRaised),
-        surfaceSunken = a(target.surfaceSunken), line = a(target.line), lineStrong = a(target.lineStrong),
-        ink = a(target.ink), inkMuted = a(target.inkMuted), inkSubtle = a(target.inkSubtle),
-        primary = a(target.primary), onPrimary = a(target.onPrimary), primarySoft = a(target.primarySoft),
-        success = a(target.success), warning = a(target.warning), danger = a(target.danger), info = a(target.info),
-        successSoft = a(target.successSoft), warningSoft = a(target.warningSoft),
-        dangerSoft = a(target.dangerSoft), infoSoft = a(target.infoSoft),
-        scrim = a(target.scrim), isDark = target.isDark,
-    )
-}
-
 /**
- * Tema del sistema de diseño. `brand == null` = neutro de plataforma (tinta sobre papel).
+ * Tema NOCHE. Marca blanca: del tenant sólo entra el color de acento (`brand.primary`, por defecto la brasa
+ * #FF6A3D); el texto sobre el acento se calcula por contraste. La tipografía (Geist), los radios (4/8/12/16)
+ * y el modo oscuro los fija el sistema: `fontDisplay`, `fontBody`, `radius` y `mode` del tenant se ignoran.
  * No pinta fondo: la raíz de cada pantalla pinta `AppTheme.colors.canvas`.
  */
 @Composable
 fun AppTheme(brand: BrandTheme? = null, content: @Composable () -> Unit) {
-    val systemDark = isSystemInDarkTheme()
-    val dark = ThemeController.darkOverride ?: when (brand?.mode) {
-        ThemeMode.DARK -> true
-        ThemeMode.LIGHT -> false
-        else -> if (brand == null) true else systemDark // Obsidiana es oscuro primero
-    }
-    val brandPrimary = remember(brand?.primary) { parseHexColor(brand?.primary) }
-    val target = remember(dark, brandPrimary) { if (dark) darkPalette(brandPrimary) else lightPalette(brandPrimary) }
-    val colors = animated(target)
+    val accent = remember(brand?.primary) { accentFor(parseHexColor(brand?.primary)) }
+    val colors = remember(accent) { nochePalette(accent) }
 
-    val displayChoice = brand?.fontDisplay ?: FontChoice.INTER
-    val bodyChoice = brand?.fontBody ?: FontChoice.INTER
-    val displayFamily = fontFamilyFor(displayChoice)
-    val bodyFamily = fontFamilyFor(bodyChoice)
-    val type = remember(displayFamily, bodyFamily, displayChoice) { buildTypography(displayFamily, bodyFamily, displayChoice) }
+    val sans = geistSans()
+    val mono = geistMono()
+    val type = remember(sans, mono) { buildTypography(sans, mono) }
+    val shapes = NocheShapes
 
-    val radius = brand?.radius ?: RadiusStyle.ROUND
-    val radiusSet = remember(radius) { radiusSetFor(radius) }
-    val shapes = remember(radiusSet) { buildShapes(radiusSet) }
-
-    // Puente a Material 3 para que cualquier componente Material se vea coherente con los tokens.
-    val scheme = if (colors.isDark) {
+    // Puente a Material 3 para que cualquier componente Material herede los tokens de NOCHE.
+    val scheme = remember(colors) {
         darkColorScheme(
             primary = colors.primary, onPrimary = colors.onPrimary,
-            primaryContainer = colors.primarySoft, onPrimaryContainer = colors.ink,
+            primaryContainer = colors.surfaceRaised, onPrimaryContainer = colors.ink,
             secondary = colors.inkMuted, onSecondary = colors.canvas,
             secondaryContainer = colors.surfaceRaised, onSecondaryContainer = colors.ink,
             tertiary = colors.info, onTertiary = colors.canvas,
@@ -275,23 +204,7 @@ fun AppTheme(brand: BrandTheme? = null, content: @Composable () -> Unit) {
             surface = colors.surface, onSurface = colors.ink,
             surfaceVariant = colors.surfaceRaised, onSurfaceVariant = colors.inkMuted,
             surfaceTint = Color.Transparent,
-            inverseSurface = colors.ink, inverseOnSurface = colors.canvas,
-            error = colors.danger, onError = contentColorOn(colors.danger),
-            errorContainer = colors.dangerSoft, onErrorContainer = colors.danger,
-            outline = colors.lineStrong, outlineVariant = colors.line, scrim = colors.scrim,
-        )
-    } else {
-        lightColorScheme(
-            primary = colors.primary, onPrimary = colors.onPrimary,
-            primaryContainer = colors.primarySoft, onPrimaryContainer = colors.ink,
-            secondary = colors.inkMuted, onSecondary = colors.surface,
-            secondaryContainer = colors.surfaceSunken, onSecondaryContainer = colors.ink,
-            tertiary = colors.info, onTertiary = colors.surface,
-            background = colors.canvas, onBackground = colors.ink,
-            surface = colors.surface, onSurface = colors.ink,
-            surfaceVariant = colors.surfaceSunken, onSurfaceVariant = colors.inkMuted,
-            surfaceTint = Color.Transparent,
-            inverseSurface = colors.ink, inverseOnSurface = colors.canvas,
+            inverseSurface = colors.select, inverseOnSurface = colors.onSelect,
             error = colors.danger, onError = contentColorOn(colors.danger),
             errorContainer = colors.dangerSoft, onErrorContainer = colors.danger,
             outline = colors.lineStrong, outlineVariant = colors.line, scrim = colors.scrim,
@@ -300,25 +213,25 @@ fun AppTheme(brand: BrandTheme? = null, content: @Composable () -> Unit) {
     val materialType = remember(type) {
         Typography(
             displayLarge = type.display, displayMedium = type.display, displaySmall = type.h1,
-            headlineLarge = type.h1, headlineMedium = type.h2, headlineSmall = type.h3,
-            titleLarge = type.h3, titleMedium = type.title, titleSmall = type.body.copy(fontWeight = FontWeight.SemiBold),
+            headlineLarge = type.h1, headlineMedium = type.h2, headlineSmall = type.h2,
+            titleLarge = type.h2, titleMedium = type.h3, titleSmall = type.title,
             bodyLarge = type.body, bodyMedium = type.body, bodySmall = type.bodySm,
-            labelLarge = type.body.copy(fontWeight = FontWeight.SemiBold), labelMedium = type.label, labelSmall = type.label,
+            labelLarge = type.h3, labelMedium = type.label, labelSmall = type.label,
         )
     }
-    val materialShapes = remember(radiusSet) {
+    val materialShapes = remember {
         Shapes(
-            extraSmall = RoundedCornerShape(radiusSet.xs),
-            small = RoundedCornerShape(radiusSet.sm),
-            medium = RoundedCornerShape(radiusSet.md),
-            large = RoundedCornerShape(radiusSet.lg),
-            extraLarge = RoundedCornerShape(radiusSet.lg),
+            extraSmall = RoundedCornerShape(4.dp),
+            small = RoundedCornerShape(8.dp),
+            medium = RoundedCornerShape(12.dp),
+            large = RoundedCornerShape(16.dp),
+            extraLarge = RoundedCornerShape(16.dp),
         )
     }
-    val selection = TextSelectionColors(
-        handleColor = colors.primary,
-        backgroundColor = colors.primary.copy(alpha = if (colors.isDark) 0.36f else 0.22f),
-    )
+    // La selección de texto es tinta, no brasa: el acento se reserva para "tu pedido".
+    val selection = remember(colors) {
+        TextSelectionColors(handleColor = colors.ink, backgroundColor = colors.ink.copy(alpha = 0.24f))
+    }
 
     MaterialTheme(colorScheme = scheme, typography = materialType, shapes = materialShapes) {
         CompositionLocalProvider(

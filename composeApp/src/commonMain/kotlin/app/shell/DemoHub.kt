@@ -1,53 +1,65 @@
 package app.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.shared.demo.DemoData
 import app.shared.model.TenantPublic
-import app.ui.components.AppCard
-import app.ui.components.AppIconButton
 import app.ui.components.AppIcons
 import app.ui.components.AppText
-import app.ui.components.BrandMark
 import app.ui.components.DishImage
 import app.ui.components.GlyphIcon
+import app.ui.components.LabelText
 import app.ui.components.SectionHeader
+import app.ui.components.Skeleton
+import app.ui.components.StatusDot
 import app.ui.components.StatusPill
 import app.ui.components.Tone
+import app.ui.components.edgeTop
+import app.ui.components.flatSurface
 import app.ui.components.pressable
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
+import app.ui.theme.Sizes
 import app.ui.theme.Space
-import app.ui.theme.ThemeController
 import app.ui.theme.WindowSize
 
 private data class HubEntry(val title: String, val description: String, val route: String, val icon: ImageVector, val account: String?)
 
-/** Índice de la demostración: las cinco apps, los restaurantes ficticios y las cuentas de prueba. */
+/** Ancho máximo del índice. */
+private val HubMaxWidth = 1080.dp
+
+/**
+ * Índice de la demostración en NOCHE: los tres restaurantes ficticios (cada uno con su fotografía y su acento)
+ * y las cuatro apps de operación como una lista de filas con filete. No hay acción principal: nada lleva brasa.
+ */
 @Composable
 fun DemoHub(onOpen: (String) -> Unit) {
     val repo = LocalRepo.current
@@ -55,7 +67,7 @@ fun DemoHub(onOpen: (String) -> Unit) {
     val size = LocalWindowSize.current
     val compact = size == WindowSize.COMPACT
     val columns = when (size) { WindowSize.COMPACT -> 1; WindowSize.MEDIUM -> 2; WindowSize.EXPANDED -> 3 }
-    val tenants by produceState(emptyList<TenantPublic>()) {
+    val tenants by produceState<List<TenantPublic>?>(null) {
         value = try {
             val all = repo.listPublicTenants()
             // Vitrina: los restaurantes de demostración con portada (el resto se ve desde la consola del operador).
@@ -65,87 +77,49 @@ fun DemoHub(onOpen: (String) -> Unit) {
     val entries = listOf(
         HubEntry("Pantalla de cocina", "Pedidos de todos los canales en tiempo real, con tiempos y un toque para marcar listo.", Routes.KITCHEN, AppIcons.Chef, "cocina@brasa.demo"),
         HubEntry("Panel del restaurante", "Marca, menú, enlaces y QR, pagos con Mercado Pago, pedidos e integraciones.", Routes.PANEL, AppIcons.Store, "dueno@brasa.demo"),
-        HubEntry("Consola del operador", "Restaurantes, planes, suscripciones y métricas globales del SaaS.", Routes.OPERATOR, AppIcons.Dashboard, DemoData.OPERATOR_EMAIL),
+        HubEntry("Consola del operador", "Restaurantes, planes, suscripciones y métricas globales del servicio.", Routes.OPERATOR, AppIcons.Dashboard, DemoData.OPERATOR_EMAIL),
         HubEntry("Sitio de venta", "Planes, registro y pago de la suscripción, con marca neutra configurable.", Routes.SITE, AppIcons.Globe, null),
     )
 
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = if (compact) Space.x4 else Space.x10, vertical = if (compact) Space.x6 else Space.x14),
+        Modifier.fillMaxSize().background(colors.canvas).verticalScroll(rememberScrollState())
+            .padding(horizontal = if (compact) Space.gutter else Space.x10, vertical = if (compact) Space.x8 else Space.x14),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(Modifier.widthIn(max = 1080.dp).fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    AppText("DEMOSTRACIÓN", style = AppTheme.type.label, color = colors.inkSubtle)
-                    Spacer(Modifier.height(Space.x2))
-                    AppText("Cinco apps, una sola plataforma", style = if (compact) AppTheme.type.h1 else AppTheme.type.display)
-                }
-                AppIconButton(
-                    icon = if (colors.isDark) AppIcons.Sun else AppIcons.Moon,
-                    onClick = { ThemeController.toggle(colors.isDark) },
-                    contentDescription = "Cambiar entre claro y oscuro",
-                )
-            }
+        Column(Modifier.widthIn(max = HubMaxWidth).fillMaxWidth()) {
+            LabelText("Demostración", color = colors.inkMuted)
+            Spacer(Modifier.height(Space.x1))
+            AppText("Cinco apps, una sola plataforma", style = if (compact) AppTheme.type.h1 else AppTheme.type.display)
             Spacer(Modifier.height(Space.x3))
             AppText(
                 "Marca blanca de punta a punta: cada restaurante ve únicamente su propia marca. Elige qué quieres revisar.",
+                modifier = Modifier.widthIn(max = 640.dp),
                 color = colors.inkMuted,
             )
             Spacer(Modifier.height(Space.x4))
             StatusPill(
-                if (repo.isRemote) "Conectado al backend · pedidos en tiempo real" else "Datos de demostración locales · sin backend",
+                if (repo.isRemote) "Conectado al servidor · en tiempo real" else "Datos de demostración · sin servidor",
                 tone = if (repo.isRemote) Tone.SUCCESS else Tone.INFO,
             )
 
             Spacer(Modifier.height(Space.x10))
-            SectionHeader("Menú digital del comensal", subtitle = "Lo que ve el cliente final por link o QR. Mismo código, tres marcas.")
-            Spacer(Modifier.height(Space.x4))
-            HubGrid(tenants, columns) { tenant ->
-                AppTheme(brand = tenant.theme) {
-                    AppCard(onClick = { onOpen(Routes.diner(tenant.slug)) }, padding = 0.dp, elevated = true) {
-                        DishImage(
-                            tenant.theme.coverUrl,
-                            Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-                            contentDescription = tenant.name,
-                            shape = AppTheme.shapes.md,
-                        )
-                        Row(Modifier.padding(Space.x4), verticalAlignment = Alignment.CenterVertically) {
-                            BrandMark(tenant.name, tenant.theme.logoUrl, size = 44.dp)
-                            Spacer(Modifier.width(Space.x3))
-                            Column(Modifier.weight(1f)) {
-                                AppText(tenant.name, style = AppTheme.type.h3, maxLines = 1)
-                                AppText(tenant.cuisine.ifBlank { tenant.tagline }, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
-                            }
-                            HubArrow()
-                        }
-                    }
-                }
+            SectionHeader("Menú del comensal", modifier = Modifier.padding(vertical = Space.x3), label = "Mismo código · tres marcas")
+            val list = tenants
+            if (list == null) {
+                HubGrid(listOf(0, 1, 2), columns) { Skeleton(Modifier.fillMaxWidth().aspectRatio(1.2f), shape = AppTheme.shapes.lg) }
+            } else {
+                HubGrid(list, columns) { tenant -> TenantTile(tenant) { onOpen(Routes.diner(tenant.slug)) } }
             }
 
-            Spacer(Modifier.height(Space.x10))
-            SectionHeader("Operación y administración", subtitle = "Contraseña de todas las cuentas de prueba: ${DemoData.DEMO_PASSWORD}")
-            Spacer(Modifier.height(Space.x4))
-            HubGrid(entries, if (columns == 3) 2 else columns) { entry ->
-                AppCard(onClick = { onOpen(entry.route) }, padding = Space.x5) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier.size(44.dp).clip(AppTheme.shapes.sm).background(colors.primarySoft),
-                            contentAlignment = Alignment.Center,
-                        ) { HubIcon(entry.icon) }
-                        Spacer(Modifier.width(Space.x4))
-                        Column(Modifier.weight(1f)) {
-                            AppText(entry.title, style = AppTheme.type.title)
-                            Spacer(Modifier.height(Space.x1))
-                            AppText(entry.description, style = AppTheme.type.bodySm, color = colors.inkMuted)
-                            if (entry.account != null) {
-                                Spacer(Modifier.height(Space.x2))
-                                AppText(entry.account, style = AppTheme.type.label, color = colors.inkSubtle)
-                            }
-                        }
-                        Spacer(Modifier.width(Space.x2))
-                        HubArrow()
-                    }
+            Spacer(Modifier.height(Space.x8))
+            SectionHeader(
+                "Operación y administración",
+                modifier = Modifier.padding(vertical = Space.x3),
+                label = "Contraseña ${DemoData.DEMO_PASSWORD}",
+            )
+            Column(Modifier.fillMaxWidth().flatSurface(colors.surface, colors.line, AppTheme.shapes.lg)) {
+                entries.forEachIndexed { index, entry ->
+                    EntryRow(entry, first = index == 0) { onOpen(entry.route) }
                 }
             }
             Spacer(Modifier.height(Space.x14))
@@ -153,46 +127,140 @@ fun DemoHub(onOpen: (String) -> Unit) {
     }
 }
 
+/** Mosaico de un restaurante: su fotografía arriba y, en el pie, nombre, cocina y su acento como muestra sólida. */
 @Composable
-private fun HubIcon(icon: ImageVector) {
-    AppIconButton(icon = icon, onClick = {}, tint = AppTheme.colors.ink)
-}
-
-@Composable
-private fun HubArrow() {
-    AppIconButton(icon = AppIcons.ChevronRight, onClick = {}, tint = AppTheme.colors.inkSubtle)
-}
-
-@Composable
-private fun <T> HubGrid(items: List<T>, columns: Int, cell: @Composable (T) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(Space.x4)) {
-        items.chunked(columns.coerceAtLeast(1)).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(Space.x4)) {
-                row.forEach { item -> Box(Modifier.weight(1f)) { cell(item) } }
-                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+private fun TenantTile(tenant: TenantPublic, onClick: () -> Unit) {
+    AppTheme(brand = tenant.theme) {
+        val colors = AppTheme.colors
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .pressable(scale = 0.99f, onClick = onClick)
+                .flatSurface(colors.surface, colors.lineStrong, AppTheme.shapes.lg),
+        ) {
+            DishImage(
+                tenant.theme.coverUrl,
+                Modifier.fillMaxWidth().aspectRatio(16f / 10f),
+                contentDescription = tenant.name,
+                shape = RectangleShape,
+                ring = false,
+            )
+            Row(
+                Modifier.fillMaxWidth().edgeTop(colors.line).padding(Space.x3),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    AppText(tenant.name, style = AppTheme.type.title, maxLines = 1)
+                    AppText(tenant.cuisine.ifBlank { tenant.tagline }, style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 1)
+                }
+                Spacer(Modifier.width(Space.x3))
+                AccentSwatch(colors.primary, colors.onPrimary, tenant.theme.primary)
+                Spacer(Modifier.width(Space.x3))
+                GlyphIcon(AppIcons.Forward, tint = colors.inkSubtle, size = Sizes.icon)
             }
         }
     }
 }
 
-/** Botón flotante discreto para volver al índice de la demo desde cualquier app. */
+/** El acento del restaurante como muestra sólida con su código en mono: es lo único que cambia entre marcas. */
+@Composable
+internal fun AccentSwatch(accent: Color, onAccent: Color, hex: String?, modifier: Modifier = Modifier) {
+    Box(
+        modifier.height(24.dp).background(accent, AppTheme.shapes.xs).padding(horizontal = Space.x2),
+        contentAlignment = Alignment.Center,
+    ) {
+        LabelText((hex ?: "Acento").removePrefix("#"), color = onAccent)
+    }
+}
+
+@Composable
+private fun EntryRow(entry: HubEntry, first: Boolean, onClick: () -> Unit) {
+    val colors = AppTheme.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .then(if (first) Modifier else Modifier.edgeTop(colors.line))
+            .pressable(scale = 0.995f, onClick = onClick)
+            .defaultMinSize(minHeight = Sizes.bar)
+            .padding(horizontal = Space.x4, vertical = Space.x3),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(Sizes.control).flatSurface(colors.surfaceRaised, colors.line, AppTheme.shapes.sm),
+            contentAlignment = Alignment.Center,
+        ) { GlyphIcon(entry.icon, tint = colors.ink, size = Sizes.icon) }
+        Spacer(Modifier.width(Space.x4))
+        Column(Modifier.weight(1f)) {
+            AppText(entry.title, style = AppTheme.type.title, maxLines = 1)
+            AppText(entry.description, style = AppTheme.type.bodySm, color = colors.inkMuted, maxLines = 2)
+            if (entry.account != null) AppText(entry.account, style = AppTheme.type.mono, color = colors.inkSubtle, maxLines = 1)
+        }
+        Spacer(Modifier.width(Space.x3))
+        GlyphIcon(AppIcons.Forward, tint = colors.inkSubtle, size = Sizes.icon)
+    }
+}
+
+@Composable
+private fun <T> HubGrid(items: List<T>, columns: Int, cell: @Composable (T) -> Unit) {
+    val cols = columns.coerceAtLeast(1)
+    Column(verticalArrangement = Arrangement.spacedBy(Space.x2)) {
+        items.chunked(cols).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+                row.forEach { item -> Box(Modifier.weight(1f)) { cell(item) } }
+                repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+// ───────────────────────── Pestaña de borde ─────────────────────────
+
+/** Medidas de la pestaña: cabe en el margen de página (16), así no tapa contenido ni acciones. */
+private val EdgeTabWidth = Space.gutter
+private val EdgeTabHeight = Sizes.controlLg
+private val EdgeTabIcon = 12.dp
+
+/**
+ * Control auxiliar pegado al borde de la pantalla, a media altura: una pestaña plana (superficie + filete) tan
+ * ancha como el margen de página, de modo que nunca cubre una acción principal. En teléfono va al borde
+ * izquierdo (a la derecha viven los "+" y las acciones); en pantallas anchas, al derecho (a la izquierda vive
+ * la barra lateral). El área de toque es algo más ancha que la cara visible.
+ */
+@Composable
+internal fun ShellEdgeTab(icon: ImageVector, contentDescription: String, onClick: () -> Unit, dot: Color? = null) {
+    val colors = AppTheme.colors
+    val compact = LocalWindowSize.current == WindowSize.COMPACT
+    val radius = Space.x2
+    val shape = if (compact) RoundedCornerShape(topEnd = radius, bottomEnd = radius) else RoundedCornerShape(topStart = radius, bottomStart = radius)
+    Box(Modifier.fillMaxSize(), contentAlignment = if (compact) Alignment.CenterStart else Alignment.CenterEnd) {
+        Box(
+            Modifier
+                .width(EdgeTabWidth + Space.x3)
+                .height(EdgeTabHeight)
+                .pressable(scale = 1f, onClick = onClick)
+                .semantics { this.contentDescription = contentDescription },
+            contentAlignment = if (compact) Alignment.CenterStart else Alignment.CenterEnd,
+        ) {
+            Column(
+                Modifier
+                    // El filete del lado pegado al borde queda fuera de la pantalla.
+                    .offset(x = if (compact) (-1).dp else 1.dp)
+                    .width(EdgeTabWidth + 1.dp)
+                    .height(EdgeTabHeight)
+                    .flatSurface(colors.surface, colors.lineStrong, shape),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Space.x1, Alignment.CenterVertically),
+            ) {
+                GlyphIcon(icon, tint = colors.inkMuted, size = EdgeTabIcon)
+                if (dot != null) StatusDot(dot)
+            }
+        }
+    }
+}
+
+/** Regreso al índice de la demo desde cualquier app: una pestaña en el margen, no un botón flotante. */
 @Composable
 fun DemoSwitcher(navigator: AppNavigator) {
     if (navigator.route == Routes.DEMO) return
-    val colors = AppTheme.colors
-    val compact = LocalWindowSize.current == WindowSize.COMPACT
-    Box(
-        // En teléfono va abajo a la izquierda, por encima de la barra del carrito; en pantallas anchas, al borde derecho.
-        Modifier.fillMaxSize().padding(start = Space.x2, end = Space.x2, top = Space.x2, bottom = if (compact) 96.dp else Space.x2),
-        contentAlignment = if (compact) Alignment.BottomStart else Alignment.CenterEnd,
-    ) {
-        Box(
-            Modifier.size(36.dp).clip(CircleShape).background(colors.surface.copy(alpha = 0.9f))
-                .border(1.dp, colors.line, CircleShape)
-                .pressable(scale = 0.9f) { navigator.navigate(Routes.DEMO) },
-            contentAlignment = Alignment.Center,
-        ) {
-            GlyphIcon(AppIcons.Home, colors.inkMuted, size = 18.dp)
-        }
-    }
+    ShellEdgeTab(AppIcons.Home, contentDescription = "Volver al índice de la demostración", onClick = { navigator.navigate(Routes.DEMO) })
 }

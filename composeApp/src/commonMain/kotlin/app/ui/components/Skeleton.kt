@@ -7,7 +7,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import app.ui.theme.AppTheme
 
-/** Bloque de carga con brillo animado; dale tamaño con el `modifier`. */
+/** Bloque de carga: superficie plana que respira (sin barrido de brillo). Dale tamaño con el `modifier`. */
 @Composable
 fun Skeleton(modifier: Modifier = Modifier, shape: Shape = AppTheme.shapes.sm) {
     Box(modifier.clip(shape).shimmer())

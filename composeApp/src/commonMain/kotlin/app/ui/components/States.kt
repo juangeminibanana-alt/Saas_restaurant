@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.ui.theme.AppTheme
+import app.ui.theme.Sizes
 import app.ui.theme.Space
 
 /** Ícono con tinte usando solo foundation (sin Material). */
@@ -44,18 +46,22 @@ internal fun GlyphIcon(icon: ImageVector, tint: Color, modifier: Modifier = Modi
     )
 }
 
-/** Mosaico redondeado con un ícono al centro (cabeceras de estados, tarjetas de métricas, etc.). */
+/**
+ * Mosaico con un ícono al centro (cabeceras de estados, tarjetas de métricas, etc.): relleno plano con filete, radio 8.
+ * Un [background] de la familia "suave" se pinta tal cual; el ícono lleva [tint].
+ */
 @Composable
 internal fun GlyphTile(icon: ImageVector, tint: Color, background: Color, modifier: Modifier = Modifier, size: Dp = 40.dp) {
+    val shape = AppTheme.shapes.sm
     Box(
-        modifier.size(size).background(background, AppTheme.shapes.sm),
+        modifier.size(size).background(background, shape).border(1.dp, AppTheme.colors.line, shape),
         contentAlignment = Alignment.Center,
     ) {
-        GlyphIcon(icon, tint, size = size * 0.5f)
+        GlyphIcon(icon, tint, size = if (size >= 40.dp) Sizes.icon else 16.dp)
     }
 }
 
-/** Tres puntos que respiran en cascada: carga tranquila, sin spinner genérico. */
+/** Tres puntos de tinta que se encienden en cascada: carga tranquila, plana, sin spinner genérico. */
 @Composable
 fun LoadingState(modifier: Modifier = Modifier, message: String? = null) {
     val colors = AppTheme.colors
@@ -82,21 +88,15 @@ fun LoadingState(modifier: Modifier = Modifier, message: String? = null) {
                     )
                     Box(
                         Modifier
-                            .size(9.dp)
-                            .graphicsLayer {
-                                val s = 0.72f + 0.28f * phase
-                                scaleX = s
-                                scaleY = s
-                                translationY = -5.dp.toPx() * phase
-                                alpha = 0.28f + 0.72f * phase
-                            }
-                            .background(colors.primary, CircleShape),
+                            .size(6.dp)
+                            .graphicsLayer { alpha = 0.24f + 0.76f * phase }
+                            .background(colors.ink, CircleShape),
                     )
                 }
             }
             if (!message.isNullOrBlank()) {
                 Spacer(Modifier.height(Space.x4))
-                AppText(message, style = AppTheme.type.bodySm, color = colors.inkMuted, textAlign = TextAlign.Center)
+                LabelText(message, color = colors.inkSubtle, maxLines = 2, textAlign = TextAlign.Center)
             }
         }
     }
@@ -107,11 +107,11 @@ fun ErrorState(message: String, modifier: Modifier = Modifier, onRetry: (() -> U
     val colors = AppTheme.colors
     Box(modifier.fillMaxWidth().padding(Space.x8), contentAlignment = Alignment.Center) {
         Column(Modifier.widthIn(max = 380.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            GlyphTile(AppIcons.Warning, tint = colors.danger, background = colors.dangerSoft, size = 52.dp)
+            GlyphTile(AppIcons.Warning, tint = colors.danger, background = AppTheme.controlFill, size = Sizes.control)
             Spacer(Modifier.height(Space.x4))
-            AppText("Algo no salió bien", style = AppTheme.type.h3, textAlign = TextAlign.Center)
+            AppText("Algo no salió bien", style = AppTheme.type.h2, textAlign = TextAlign.Center)
             Spacer(Modifier.height(Space.x2))
-            AppText(message, style = AppTheme.type.body, color = colors.inkMuted, textAlign = TextAlign.Center)
+            AppText(message, style = AppTheme.type.bodySm, color = colors.inkMuted, textAlign = TextAlign.Center)
             if (onRetry != null) {
                 Spacer(Modifier.height(Space.x5))
                 AppButton("Reintentar", onClick = onRetry, variant = ButtonVariant.SECONDARY, icon = AppIcons.Refresh)
@@ -133,22 +133,17 @@ fun EmptyState(
     Box(modifier.fillMaxWidth().padding(Space.x8), contentAlignment = Alignment.Center) {
         Column(Modifier.widthIn(max = 380.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             if (icon != null) {
-                Box(
-                    Modifier.size(64.dp).background(colors.surfaceSunken, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    GlyphIcon(icon, colors.inkMuted, size = 28.dp)
-                }
+                GlyphTile(icon, tint = colors.inkMuted, background = AppTheme.controlFill, size = Sizes.control)
                 Spacer(Modifier.height(Space.x4))
             }
-            AppText(title, style = AppTheme.type.h3, textAlign = TextAlign.Center)
+            AppText(title, style = AppTheme.type.h2, textAlign = TextAlign.Center)
             if (message.isNotBlank()) {
                 Spacer(Modifier.height(Space.x2))
-                AppText(message, style = AppTheme.type.body, color = colors.inkMuted, textAlign = TextAlign.Center)
+                AppText(message, style = AppTheme.type.bodySm, color = colors.inkMuted, textAlign = TextAlign.Center)
             }
             if (actionText != null && onAction != null) {
                 Spacer(Modifier.height(Space.x5))
-                AppButton(actionText, onClick = onAction)
+                AppButton(actionText, onClick = onAction, variant = ButtonVariant.SECONDARY)
             }
         }
     }

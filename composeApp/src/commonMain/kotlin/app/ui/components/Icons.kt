@@ -33,9 +33,10 @@ internal fun IconGlyph(
     )
 }
 
-private const val STROKE = 1.75f
+// Trazo único de NOCHE: 1.5 px al tamaño estándar de 20 dp (1.8 en el viewport de 24).
+private const val STROKE = 1.8f
 
-/** Ícono de contorno: viewport 24, trazo 1.75 con remates y uniones redondeadas, sin relleno. */
+/** Ícono de contorno: viewport 24, trazo único con remates y uniones redondeadas, sin relleno. */
 private fun icon(name: String, vararg paths: String): ImageVector {
     val builder = ImageVector.Builder(
         name = name, defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f,

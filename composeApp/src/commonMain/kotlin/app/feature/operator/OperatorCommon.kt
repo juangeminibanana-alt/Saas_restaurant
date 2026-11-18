@@ -2,7 +2,6 @@ package app.feature.operator
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -21,21 +20,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -44,9 +40,14 @@ import app.shared.util.nowMillis
 import app.ui.components.AppIconButton
 import app.ui.components.AppIcons
 import app.ui.components.AppText
+import app.ui.components.LabelText
 import app.ui.components.Toasts
 import app.ui.components.Tone
+import app.ui.components.edgeBottom
+import app.ui.components.flatSurface
+import app.ui.components.ring
 import app.ui.theme.AppTheme
+import app.ui.theme.LocalSurfaceLevel
 import app.ui.theme.LocalWindowSize
 import app.ui.theme.Space
 import app.ui.theme.WindowSize
@@ -71,14 +72,12 @@ internal enum class OpSection(val id: String, val label: String, val shortLabel:
 
 // ───────────────────────── Layout ─────────────────────────
 
-/** Contenedor de página: scroll vertical, ancho máximo cómodo y aire según el tamaño de ventana. */
+/**
+ * Contenedor de página: scroll vertical y ancho máximo. El margen lateral y el superior ya los pone el armazón
+ * de la consola (16 en teléfono), así que aquí no se repiten.
+ */
 @Composable
 internal fun OpPage(content: @Composable ColumnScope.() -> Unit) {
-    val pad = when (LocalWindowSize.current) {
-        WindowSize.COMPACT -> Space.x4
-        WindowSize.MEDIUM -> Space.x6
-        WindowSize.EXPANDED -> Space.x8
-    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val scroll = if (constraints.hasBoundedHeight) {
             Modifier.fillMaxHeight().verticalScroll(rememberScrollState())
@@ -87,31 +86,24 @@ internal fun OpPage(content: @Composable ColumnScope.() -> Unit) {
         }
         Box(Modifier.fillMaxWidth().then(scroll), contentAlignment = Alignment.TopCenter) {
             Column(
-                Modifier
-                    .widthIn(max = 1240.dp)
-                    .fillMaxWidth()
-                    .padding(start = pad, end = pad, top = pad, bottom = pad + Space.x8),
-                verticalArrangement = Arrangement.spacedBy(Space.x6),
+                Modifier.widthIn(max = 1240.dp).fillMaxWidth().padding(bottom = Space.x14),
+                verticalArrangement = Arrangement.spacedBy(Space.x4),
                 content = content,
             )
         }
     }
 }
 
-/** Superficie con borde fino para tablas y tarjetas propias de la consola. */
+/** Mosaico de la consola: superficie 1 con filete (radio 16), para tablas y tarjetas. Sin sombra. */
 @Composable
 internal fun OpPanel(
     modifier: Modifier = Modifier,
     borderColor: Color = AppTheme.colors.line,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier
-            .clip(AppTheme.shapes.lg)
-            .background(AppTheme.colors.surface)
-            .border(1.dp, borderColor, AppTheme.shapes.lg),
-        content = content,
-    )
+    CompositionLocalProvider(LocalSurfaceLevel provides 1) {
+        Column(modifier.flatSurface(AppTheme.colors.surface, borderColor, AppTheme.shapes.lg), content = content)
+    }
 }
 
 /** Rejilla simple de N columnas (sin lazy: las listas de la consola son cortas). */
@@ -120,7 +112,7 @@ internal fun <T> OpGrid(
     items: List<T>,
     columns: Int,
     modifier: Modifier = Modifier,
-    spacing: Dp = Space.x4,
+    spacing: Dp = Space.x2,
     equalHeight: Boolean = false,
     cell: @Composable (T) -> Unit,
 ) {
@@ -143,22 +135,20 @@ internal fun <T> OpGrid(
 
 internal data class OpColumn(val title: String, val weight: Float, val end: Boolean = false)
 
+/** Encabezado de tabla: etiquetas en mono MAYÚSCULAS sobre un filete. Sin fondo propio. */
 @Composable
 internal fun OpTableHeader(columns: List<OpColumn>, trailing: Dp = 0.dp) {
     Row(
         Modifier
             .fillMaxWidth()
-            .background(AppTheme.colors.surfaceSunken)
-            .padding(horizontal = Space.x5, vertical = Space.x3),
+            .edgeBottom(AppTheme.colors.line)
+            .padding(horizontal = Space.x4, vertical = Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         columns.forEach { column ->
-            AppText(
-                column.title.uppercase(),
+            LabelText(
+                column.title,
                 Modifier.weight(column.weight).padding(end = Space.x3),
-                style = AppTheme.type.label,
-                color = AppTheme.colors.inkSubtle,
-                maxLines = 1,
                 textAlign = if (column.end) TextAlign.End else TextAlign.Start,
             )
         }
@@ -181,40 +171,46 @@ internal fun OpIcon(icon: ImageVector, tint: Color = AppTheme.colors.inkMuted, s
     Image(icon, contentDescription = null, modifier = modifier.size(size), colorFilter = ColorFilter.tint(tint))
 }
 
-/** Monograma del restaurante sobre su color de marca (o tinta si es neutro). */
+/**
+ * Monograma del restaurante: inicial en tinta sobre superficie con filete. Su color de marca es un dato, no un
+ * fondo: se enseña como una muestra sólida pequeña en la esquina.
+ */
 @Composable
 internal fun TenantMonogram(name: String, hex: String?, size: Dp = 36.dp) {
     val colors = AppTheme.colors
-    val brand = parseHexColor(hex) ?: colors.ink
-    val darkInk = if (colors.isDark) colors.canvas else colors.ink
-    val lightInk = if (colors.isDark) colors.ink else colors.surface
-    val on = if (brand.luminance() > 0.55f) darkInk else lightInk
+    val brand = parseHexColor(hex)
     Box(
-        Modifier.size(size).clip(AppTheme.shapes.sm).background(brand),
+        Modifier.size(size).flatSurface(AppTheme.controlFill, colors.line, AppTheme.shapes.sm),
         contentAlignment = Alignment.Center,
     ) {
-        AppText(name.trim().take(1).uppercase().ifEmpty { "·" }, style = AppTheme.type.title, color = on)
+        AppText(name.trim().take(1).uppercase().ifEmpty { "·" }, style = AppTheme.type.title, color = colors.ink)
+        if (brand != null) {
+            Box(Modifier.align(Alignment.BottomEnd).padding(Space.x1).size(Space.x2).background(brand, AppTheme.shapes.xs))
+        }
     }
 }
 
+/** Muestra sólida del color de marca de un restaurante. */
 @Composable
 internal fun BrandDot(hex: String?, size: Dp = 10.dp) {
-    val color = parseHexColor(hex) ?: AppTheme.colors.ink
-    Box(Modifier.size(size).clip(CircleShape).background(color).border(1.dp, AppTheme.colors.line, CircleShape))
+    val color = parseHexColor(hex) ?: AppTheme.colors.inkSubtle
+    Box(Modifier.size(size).background(color, AppTheme.shapes.xs))
 }
 
+/** Dato con su nombre: etiqueta en mono arriba, valor abajo ([mono] = cifra en Geist Mono). */
 @Composable
-internal fun OpKeyValue(label: String, value: String, modifier: Modifier = Modifier) {
+internal fun OpKeyValue(label: String, value: String, modifier: Modifier = Modifier, mono: Boolean = false) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(Space.x1)) {
-        AppText(label, style = AppTheme.type.label, color = AppTheme.colors.inkSubtle)
-        AppText(value, style = AppTheme.type.body)
+        LabelText(label)
+        AppText(value, style = if (mono) AppTheme.type.monoMd else AppTheme.type.title)
     }
 }
 
+/** Geist Mono 13/20 para identificadores, enlaces y variables. */
 @Composable
-internal fun monoStyle(): TextStyle = AppTheme.type.bodySm.copy(fontFamily = FontFamily.Monospace)
+internal fun monoStyle(): TextStyle = AppTheme.type.mono
 
-/** Dato copiable (links, credenciales) sobre fondo hundido. */
+/** Dato copiable (links, credenciales): superficie + filete, etiqueta en mono y el dato en mono. */
 @Composable
 internal fun OpCopyRow(label: String, value: String, modifier: Modifier = Modifier) {
     @Suppress("DEPRECATION")
@@ -222,14 +218,13 @@ internal fun OpCopyRow(label: String, value: String, modifier: Modifier = Modifi
     Row(
         modifier
             .fillMaxWidth()
-            .clip(AppTheme.shapes.md)
-            .background(AppTheme.colors.surfaceSunken)
-            .padding(start = Space.x4, end = Space.x2, top = Space.x2, bottom = Space.x2),
+            .flatSurface(AppTheme.controlFill, AppTheme.colors.line, AppTheme.shapes.md)
+            .padding(start = Space.x4, end = Space.x1, top = Space.x2, bottom = Space.x2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Space.x1)) {
-            AppText(label, style = AppTheme.type.label, color = AppTheme.colors.inkSubtle)
-            AppText(value, style = monoStyle().copy(fontSize = AppTheme.type.body.fontSize), maxLines = 1)
+            LabelText(label)
+            AppText(value, style = AppTheme.type.monoMd, maxLines = 1)
         }
         AppIconButton(
             AppIcons.Copy,
@@ -239,24 +234,24 @@ internal fun OpCopyRow(label: String, value: String, modifier: Modifier = Modifi
             },
             contentDescription = "Copiar $label",
             tint = AppTheme.colors.inkMuted,
+            plain = true,
         )
     }
 }
 
-/** Aviso informativo de una línea (banda suave). */
+/** Aviso informativo de una línea: filete, ícono apagado y texto chico. Sin fondo de color. */
 @Composable
 internal fun OpNotice(text: String, modifier: Modifier = Modifier, icon: ImageVector = AppIcons.Info) {
     Row(
         modifier
             .fillMaxWidth()
-            .clip(AppTheme.shapes.md)
-            .background(AppTheme.colors.infoSoft)
+            .ring(AppTheme.colors.line, AppTheme.shapes.md)
             .padding(horizontal = Space.x4, vertical = Space.x3),
         horizontalArrangement = Arrangement.spacedBy(Space.x3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OpIcon(icon, tint = AppTheme.colors.info, size = 20.dp)
-        AppText(text, Modifier.weight(1f), style = AppTheme.type.bodySm, color = AppTheme.colors.ink)
+        OpIcon(icon, tint = AppTheme.colors.inkSubtle, size = 16.dp)
+        AppText(text, Modifier.weight(1f), style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted)
     }
 }
 

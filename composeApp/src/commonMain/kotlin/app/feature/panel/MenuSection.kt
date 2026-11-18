@@ -1,6 +1,5 @@
 package app.feature.panel
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -26,6 +25,7 @@ import app.shell.LocalRepo
 import app.ui.components.*
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
+import app.ui.theme.Sizes
 import app.ui.theme.Space
 import app.ui.theme.WindowSize
 import kotlinx.coroutines.launch
@@ -33,12 +33,9 @@ import kotlin.coroutines.cancellation.CancellationException
 
 private val knownTags = listOf("popular", "nuevo", "picante", "vegetariano", "vegano", "sin gluten")
 
+/** Las etiquetas son datos, no alertas: "popular" va en tinta sólida (destacado) y el resto en ficha neutra. */
 private fun tagTone(tag: String): Tone = when (tag.lowercase()) {
     "popular" -> Tone.PRIMARY
-    "nuevo" -> Tone.INFO
-    "picante" -> Tone.DANGER
-    "vegetariano", "vegano" -> Tone.SUCCESS
-    "sin gluten" -> Tone.WARNING
     else -> Tone.NEUTRAL
 }
 
@@ -115,7 +112,7 @@ internal fun MenuSection() {
 
         when (val state = loader.state) {
             Load.Loading -> {
-                Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) { repeat(4) { Skeleton(Modifier.width(96.dp).height(36.dp), shape = AppTheme.shapes.pill) } }
+                Row(horizontalArrangement = Arrangement.spacedBy(Space.x2)) { repeat(4) { Skeleton(Modifier.width(96.dp).height(36.dp), shape = AppTheme.shapes.sm) } }
                 SkeletonRows(rows = 6)
             }
             is Load.Failed -> ErrorState(state.message, onRetry = { loader.reload() })
@@ -137,7 +134,7 @@ internal fun MenuSection() {
                 if (selectedCategory != null) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
                         Column(Modifier.weight(1f)) {
-                            AppText(selectedCategory.name, style = AppTheme.type.h3, maxLines = 1)
+                            AppText(selectedCategory.name, style = AppTheme.type.h2, maxLines = 1)
                             if (selectedCategory.description.isNotBlank()) AppText(selectedCategory.description, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 2)
                         }
                         AppButton("Renombrar", onClick = { editingCategory = selectedCategory; categoryDialogOpen = true }, variant = ButtonVariant.GHOST, size = ButtonSize.SM, icon = AppIcons.Edit)
@@ -168,13 +165,11 @@ internal fun MenuSection() {
                 } else if (size == WindowSize.EXPANDED) {
                     AppCard(Modifier.fillMaxWidth(), padding = 0.dp) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = Space.x4, vertical = Space.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x4)) {
-                            val head = AppTheme.type.label
-                            val muted = AppTheme.colors.inkSubtle
-                            AppText("PLATILLO", Modifier.weight(2.6f), style = head, color = muted)
-                            AppText("CATEGORÍA", Modifier.weight(1f), style = head, color = muted)
-                            AppText("ETIQUETAS", Modifier.weight(1.4f), style = head, color = muted)
-                            AppText("PRECIO", Modifier.width(88.dp), style = head, color = muted, textAlign = TextAlign.End)
-                            AppText("DISPONIBLE", Modifier.width(196.dp), style = head, color = muted)
+                            ColumnLabel("Platillo", Modifier.weight(2.6f))
+                            ColumnLabel("Categoría", Modifier.weight(1f))
+                            ColumnLabel("Etiquetas", Modifier.weight(1.4f))
+                            ColumnLabel("Precio", Modifier.width(88.dp), end = true)
+                            ColumnLabel("Disponible", Modifier.width(196.dp))
                         }
                         items.forEach { item ->
                             AppDivider()
@@ -275,7 +270,7 @@ internal fun MenuSection() {
 private fun TagRow(tags: List<String>, modifier: Modifier = Modifier, max: Int = 3) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(Space.x1), verticalAlignment = Alignment.CenterVertically) {
         tags.take(max).forEach { TagBadge(tagLabel(it), tone = tagTone(it)) }
-        if (tags.size > max) AppText("+${tags.size - max}", style = AppTheme.type.label, color = AppTheme.colors.inkSubtle)
+        if (tags.size > max) AppText("+${tags.size - max}", style = AppTheme.type.mono, color = AppTheme.colors.inkSubtle)
     }
 }
 
@@ -284,20 +279,20 @@ private fun ItemTableRow(item: MenuItem, categoryName: String, onAvailability: (
     val dim = if (item.available) 1f else 0.55f
     Row(Modifier.fillMaxWidth().padding(horizontal = Space.x4, vertical = Space.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x4)) {
         Row(Modifier.weight(2.6f).alpha(dim), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
-            DishImage(url = item.imageUrl, modifier = Modifier.size(56.dp), shape = AppTheme.shapes.sm)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            DishImage(url = item.imageUrl, modifier = Modifier.size(Sizes.controlXl), shape = AppTheme.shapes.sm)
+            Column(Modifier.weight(1f)) {
                 AppText(item.name, style = AppTheme.type.title, maxLines = 1)
                 AppText(item.description.ifBlank { "Sin descripción" }, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
             }
         }
         AppText(categoryName, Modifier.weight(1f).alpha(dim), style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
         TagRow(item.tags, Modifier.weight(1.4f).alpha(dim), max = 2)
-        AppText(formatMoney(item.priceCents), Modifier.width(88.dp).alpha(dim), style = AppTheme.type.title, textAlign = TextAlign.End, maxLines = 1)
+        AppText(formatMoney(item.priceCents), Modifier.width(88.dp).alpha(dim), style = AppTheme.type.mono, textAlign = TextAlign.End, maxLines = 1)
         Row(Modifier.width(196.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
             AppSwitch(checked = item.available, onCheckedChange = onAvailability)
             Spacer(Modifier.weight(1f))
-            AppIconButton(AppIcons.Edit, onClick = onEdit, contentDescription = "Editar ${item.name}")
-            AppIconButton(AppIcons.Delete, onClick = onDelete, contentDescription = "Eliminar ${item.name}", tint = AppTheme.colors.danger)
+            AppIconButton(AppIcons.Edit, onClick = onEdit, contentDescription = "Editar ${item.name}", tint = AppTheme.colors.inkMuted, plain = true)
+            AppIconButton(AppIcons.Delete, onClick = onDelete, contentDescription = "Eliminar ${item.name}", tint = AppTheme.colors.inkMuted, plain = true)
         }
     }
 }
@@ -307,12 +302,13 @@ private fun ItemCard(item: MenuItem, categoryName: String, onAvailability: (Bool
     AppCard(Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(Space.x3)) {
             Row(Modifier.alpha(if (item.available) 1f else 0.55f), horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
-                DishImage(url = item.imageUrl, modifier = Modifier.size(76.dp), shape = AppTheme.shapes.sm)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                DishImage(url = item.imageUrl, modifier = Modifier.size(Sizes.thumb), shape = AppTheme.shapes.md)
+                Column(Modifier.weight(1f).heightIn(min = Sizes.thumb)) {
+                    LabelText(categoryName)
                     AppText(item.name, style = AppTheme.type.title, maxLines = 1)
-                    AppText(categoryName, style = AppTheme.type.label, color = AppTheme.colors.inkSubtle, maxLines = 1)
-                    if (item.description.isNotBlank()) AppText(item.description, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 2)
-                    AppText(formatMoney(item.priceCents), style = AppTheme.type.title, maxLines = 1)
+                    if (item.description.isNotBlank()) AppText(item.description, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
+                    Spacer(Modifier.weight(1f))
+                    AppText(formatMoney(item.priceCents), style = AppTheme.type.mono, maxLines = 1)
                 }
             }
             if (item.tags.isNotEmpty()) TagRow(item.tags)
@@ -321,7 +317,7 @@ private fun ItemCard(item: MenuItem, categoryName: String, onAvailability: (Bool
                 AppSwitch(checked = item.available, onCheckedChange = onAvailability)
                 AppText(if (item.available) "Disponible" else "Agotado", Modifier.weight(1f), style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
                 AppIconButton(AppIcons.Edit, onClick = onEdit, contentDescription = "Editar ${item.name}")
-                AppIconButton(AppIcons.Delete, onClick = onDelete, contentDescription = "Eliminar ${item.name}", tint = AppTheme.colors.danger)
+                AppIconButton(AppIcons.Delete, onClick = onDelete, contentDescription = "Eliminar ${item.name}", tint = AppTheme.colors.inkMuted)
             }
         }
     }
@@ -437,7 +433,7 @@ private fun ItemDialog(initial: MenuItem?, menu: Menu, defaultCategoryId: String
 
             FieldLabel("Categoría")
             if (categories.isEmpty()) {
-                AppText("Primero crea una categoría para poder guardar el platillo.", style = AppTheme.type.bodySm, color = AppTheme.colors.danger)
+                PanelNotice("Primero crea una categoría para poder guardar el platillo.", tone = Tone.DANGER)
             } else {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
                     categories.forEach { cat -> AppChip(cat.name, selected = categoryId == cat.id, onClick = { categoryId = cat.id }) }
@@ -454,13 +450,14 @@ private fun ItemDialog(initial: MenuItem?, menu: Menu, defaultCategoryId: String
                     demoPhotos.forEach { photo ->
                         val selected = imageUrl.trim() == photo
                         val shape = AppTheme.shapes.sm
+                        // Elegida = filete en tinta (la selección no usa la brasa).
                         Box(
                             Modifier.size(64.dp).clip(shape)
-                                .border(2.dp, if (selected) AppTheme.colors.primary else AppTheme.colors.line, shape)
+                                .border(if (selected) 2.dp else 1.dp, if (selected) AppTheme.colors.select else AppTheme.colors.line, shape)
                                 .pressable(onClick = { imageUrl = photo })
-                                .padding(3.dp),
+                                .padding(Space.x1),
                         ) {
-                            DishImage(url = photo, modifier = Modifier.fillMaxSize(), shape = shape)
+                            DishImage(url = photo, modifier = Modifier.fillMaxSize(), shape = AppTheme.shapes.xs, ring = false)
                         }
                     }
                 }
@@ -497,12 +494,12 @@ private fun ItemDialog(initial: MenuItem?, menu: Menu, defaultCategoryId: String
 @Composable
 private fun GroupEditor(group: GroupDraft, onRemove: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().clip(AppTheme.shapes.md).background(AppTheme.colors.surfaceSunken).padding(Space.x3),
+        Modifier.fillMaxWidth().border(1.dp, AppTheme.colors.line, AppTheme.shapes.md).padding(Space.x3),
         verticalArrangement = Arrangement.spacedBy(Space.x2),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
             AppTextField(group.name, { group.name = it }, Modifier.weight(1f), placeholder = "Nombre del grupo (ej. Término)")
-            AppIconButton(AppIcons.Delete, onClick = onRemove, contentDescription = "Quitar grupo", tint = AppTheme.colors.danger)
+            AppIconButton(AppIcons.Delete, onClick = onRemove, contentDescription = "Quitar grupo", tint = AppTheme.colors.inkMuted)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
             AppSwitch(checked = group.required, onCheckedChange = { group.required = it })

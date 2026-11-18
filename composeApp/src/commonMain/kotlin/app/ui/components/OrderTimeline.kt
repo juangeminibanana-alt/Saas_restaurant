@@ -1,12 +1,7 @@
 package app.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,9 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.shared.model.Order
 import app.shared.model.OrderStatus
@@ -41,12 +33,13 @@ import app.ui.theme.Space
 
 private class TimelineStep(val title: String, val subtitle: String, val at: Long?)
 
-private val NodeSize = 28.dp
+private val NodeSize = 24.dp
 
 /**
  * Línea de tiempo vertical del pedido: Pagado → En preparación → Listo → Entregado.
- * Pasos terminados con palomita, paso actual con halo que pulsa, conector que se llena con animación.
- * PENDING_PAYMENT, CANCELLED y REFUNDED muestran un aviso claro arriba.
+ * Lo ya ocurrido va en tinta sólida (nodo con palomita y conector lleno); el paso actual es el único nodo
+ * en brasa sólida ("tu pedido"), sin halo ni pulso; lo que falta es sólo un filete.
+ * PENDING_PAYMENT, CANCELLED y REFUNDED muestran un aviso plano arriba.
  */
 @Composable
 fun OrderStatusTimeline(order: Order, modifier: Modifier = Modifier) {
@@ -77,17 +70,17 @@ fun OrderStatusTimeline(order: Order, modifier: Modifier = Modifier) {
             OrderStatus.PENDING_PAYMENT -> TimelineNotice(
                 title = "Esperando tu pago",
                 message = "En cuanto se confirme, tu pedido entra a cocina.",
-                tone = colors.warning, soft = colors.warningSoft, pulsing = true,
+                tone = colors.warning,
             )
             OrderStatus.CANCELLED -> TimelineNotice(
                 title = "Pedido cancelado",
                 message = "Este pedido se canceló y no se preparará.",
-                tone = colors.danger, soft = colors.dangerSoft, pulsing = false,
+                tone = colors.danger,
             )
             OrderStatus.REFUNDED -> TimelineNotice(
                 title = "Pedido reembolsado",
                 message = "Devolvimos el pago a tu método original. Puede tardar unos días en reflejarse.",
-                tone = colors.info, soft = colors.infoSoft, pulsing = false,
+                tone = colors.info,
             )
             else -> Unit
         }
@@ -111,13 +104,20 @@ fun OrderStatusTimeline(order: Order, modifier: Modifier = Modifier) {
 private fun TimelineRow(step: TimelineStep, done: Boolean, active: Boolean, isLast: Boolean, connectorFilled: Boolean) {
     val colors = AppTheme.colors
     val reached = done || active
-    val fill by animateFloatAsState(if (connectorFilled) 1f else 0f, tween(Motion.HERO, easing = Motion.standard), label = "connector")
-    val nodeColor by animateColorAsState(if (reached) colors.primary else colors.surface, tween(Motion.SLOW), label = "node")
-    val ringColor by animateColorAsState(if (reached) colors.primary else colors.lineStrong, tween(Motion.SLOW), label = "ring")
-    val titleColor by animateColorAsState(if (reached) colors.ink else colors.inkSubtle, tween(Motion.SLOW), label = "title")
-    val checkScale by animateFloatAsState(if (done) 1f else 0f, Motion.bouncy(), label = "check")
+    val fill by animateFloatAsState(if (connectorFilled) 1f else 0f, tween(Motion.SLOW, easing = Motion.standard), label = "connector")
+    val nodeColor by animateColorAsState(
+        when {
+            active -> colors.primary
+            done -> colors.select
+            else -> colors.select.copy(alpha = 0f)
+        },
+        tween(Motion.BASE),
+        label = "node",
+    )
+    val ringColor by animateColorAsState(if (reached) colors.lineStrong.copy(alpha = 0f) else colors.lineStrong, tween(Motion.BASE), label = "ring")
+    val titleColor by animateColorAsState(if (reached) colors.ink else colors.inkSubtle, tween(Motion.BASE), label = "title")
     val trackColor = colors.line
-    val fillColor = colors.primary
+    val fillColor = colors.select
 
     Row(
         Modifier
@@ -128,93 +128,59 @@ private fun TimelineRow(step: TimelineStep, done: Boolean, active: Boolean, isLa
                 val top = NodeSize.toPx() + 4.dp.toPx()
                 val bottom = size.height - 4.dp.toPx()
                 if (bottom <= top) return@drawBehind
-                val w = 2.dp.toPx()
-                drawLine(trackColor, Offset(x, top), Offset(x, bottom), strokeWidth = w, cap = StrokeCap.Round)
+                val w = 1.dp.toPx()
+                drawLine(trackColor, Offset(x, top), Offset(x, bottom), strokeWidth = w)
                 if (fill > 0.01f) {
-                    drawLine(fillColor, Offset(x, top), Offset(x, top + (bottom - top) * fill), strokeWidth = w, cap = StrokeCap.Round)
+                    drawLine(fillColor, Offset(x, top), Offset(x, top + (bottom - top) * fill), strokeWidth = w)
                 }
             },
     ) {
-        Box(Modifier.size(NodeSize), contentAlignment = Alignment.Center) {
-            if (active) PulseHalo(colors.primary)
-            Box(
-                Modifier.size(NodeSize).background(nodeColor, CircleShape).border(1.5.dp, ringColor, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                when {
-                    done -> GlyphIcon(
-                        AppIcons.Check,
-                        tint = colors.onPrimary,
-                        modifier = Modifier.graphicsLayer { scaleX = checkScale; scaleY = checkScale },
-                        size = 16.dp,
-                    )
-                    active -> Box(Modifier.size(8.dp).background(colors.onPrimary, CircleShape))
-                    else -> Box(Modifier.size(6.dp).background(colors.lineStrong, CircleShape))
-                }
+        Box(
+            Modifier.size(NodeSize).background(nodeColor, CircleShape).border(1.dp, ringColor, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                done -> GlyphIcon(AppIcons.Check, tint = colors.onSelect, size = 16.dp)
+                active -> Box(Modifier.size(8.dp).background(colors.onPrimary, CircleShape))
+                else -> Unit
             }
         }
         Spacer(Modifier.width(Space.x4))
-        Column(Modifier.weight(1f).padding(top = 3.dp, bottom = if (isLast) 0.dp else Space.x6)) {
+        Column(Modifier.weight(1f).padding(top = 2.dp, bottom = if (isLast) 0.dp else Space.x6)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AppText(
                     step.title,
                     modifier = Modifier.weight(1f),
-                    style = AppTheme.type.title.copy(fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium),
+                    style = if (active) AppTheme.type.h3 else AppTheme.type.title,
                     color = titleColor,
                     maxLines = 1,
                 )
                 if (reached && step.at != null) {
                     Spacer(Modifier.width(Space.x2))
-                    AppText(relativeTime(step.at), style = AppTheme.type.label, color = colors.inkSubtle, maxLines = 1)
+                    AppText(relativeTime(step.at), style = AppTheme.type.mono, color = colors.inkSubtle, maxLines = 1)
                 }
             }
             if (reached) {
-                Spacer(Modifier.height(2.dp))
-                AppText(step.subtitle, style = AppTheme.type.bodySm, color = if (active) colors.inkMuted else colors.inkSubtle)
+                AppText(step.subtitle, style = AppTheme.type.bodySm, color = colors.inkMuted)
             }
         }
     }
 }
 
-/** Halo que crece y se desvanece alrededor del paso actual. */
+/** Aviso plano: superficie + filete, punto sólido del tono, título en tinta. */
 @Composable
-private fun PulseHalo(color: Color) {
-    val transition = rememberInfiniteTransition(label = "pulse")
-    val t by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1600, easing = LinearEasing), RepeatMode.Restart),
-        label = "halo",
-    )
-    Box(
-        Modifier
-            .size(NodeSize)
-            .graphicsLayer {
-                val eased = 1f - (1f - t) * (1f - t)
-                val s = 1f + 0.95f * eased
-                scaleX = s
-                scaleY = s
-                alpha = 0.34f * (1f - eased)
-            }
-            .background(color, CircleShape),
-    )
-}
-
-@Composable
-private fun TimelineNotice(title: String, message: String, tone: Color, soft: Color, pulsing: Boolean) {
+private fun TimelineNotice(title: String, message: String, tone: Color) {
+    val colors = AppTheme.colors
+    val shape = AppTheme.shapes.md
     Row(
-        Modifier.fillMaxWidth().background(soft, AppTheme.shapes.md).padding(Space.x4),
-        verticalAlignment = Alignment.CenterVertically,
+        Modifier.fillMaxWidth().background(AppTheme.controlFill, shape).border(1.dp, colors.line, shape).padding(Space.x4),
+        verticalAlignment = Alignment.Top,
     ) {
-        Box(Modifier.size(NodeSize), contentAlignment = Alignment.Center) {
-            if (pulsing) PulseHalo(tone)
-            Box(Modifier.size(12.dp).background(tone, CircleShape))
-        }
+        Box(Modifier.size(width = 6.dp, height = 20.dp), contentAlignment = Alignment.Center) { StatusDot(tone) }
         Spacer(Modifier.width(Space.x3))
         Column(Modifier.weight(1f)) {
-            AppText(title, style = AppTheme.type.title, color = tone)
-            Spacer(Modifier.height(2.dp))
-            AppText(message, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted)
+            AppText(title, style = AppTheme.type.h3)
+            AppText(message, style = AppTheme.type.bodySm, color = colors.inkMuted)
         }
     }
 }

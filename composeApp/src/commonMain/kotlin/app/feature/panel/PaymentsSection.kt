@@ -101,45 +101,49 @@ private fun PaymentsContent(status: MpConnectionStatus, busy: Boolean, onConnect
     val size = LocalWindowSize.current
     val c = AppTheme.colors
 
-    AppCard(Modifier.fillMaxWidth(), padding = Space.x5, elevated = true) {
+    AppCard(Modifier.fillMaxWidth(), padding = Space.x4, elevated = true) {
         Column(verticalArrangement = Arrangement.spacedBy(Space.x4)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
-                IconBadge(AppIcons.Wallet, tone = if (status.connected) Tone.SUCCESS else Tone.NEUTRAL, size = 52.dp)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    AppText("Mercado Pago", style = AppTheme.type.h3)
+                IconBadge(AppIcons.Wallet)
+                Column(Modifier.weight(1f)) {
+                    AppText("Mercado Pago", style = AppTheme.type.title, maxLines = 1)
                     AppText(
                         if (status.connected) "Cuenta ${status.mpUserId ?: "vinculada"}" else "Aún no has vinculado tu cuenta",
-                        style = AppTheme.type.bodySm, color = c.inkMuted, maxLines = 1,
+                        style = if (status.connected) AppTheme.type.mono else AppTheme.type.bodySm, color = c.inkMuted, maxLines = 1,
                     )
                 }
-                if (size != WindowSize.COMPACT) {
-                    StatusPill(if (status.connected) "Conectado" else "Sin conectar", tone = if (status.connected) Tone.SUCCESS else Tone.WARNING)
-                }
-            }
-            if (size == WindowSize.COMPACT) {
                 StatusPill(if (status.connected) "Conectado" else "Sin conectar", tone = if (status.connected) Tone.SUCCESS else Tone.WARNING)
             }
-            AppText("El dinero de cada venta cae directo en tu cuenta de Mercado Pago", style = AppTheme.type.title)
+            AppDivider()
+            AppText("El dinero de cada venta cae directo en tu cuenta", style = AppTheme.type.h2)
             AppText(
                 "Tus clientes pagan desde tu menú y el cobro se acredita a tu nombre. Nadie retiene tu dinero: solo se descuenta la comisión por pedido.",
+                modifier = Modifier.widthIn(max = 640.dp),
                 color = c.inkMuted,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.CenterVertically) {
                 if (status.connected) {
                     AppButton("Desconectar", onClick = onDisconnect, variant = ButtonVariant.SECONDARY, loading = busy)
                 } else {
-                    AppButton("Conectar con Mercado Pago", onClick = onConnect, icon = AppIcons.Plug, loading = busy, size = ButtonSize.LG)
+                    AppButton("Conectar con Mercado Pago", onClick = onConnect, loading = busy, trailingIcon = AppIcons.Forward, fullWidth = size == WindowSize.COMPACT)
                 }
             }
         }
     }
 
     val commission: @Composable (Modifier) -> Unit = { modifier ->
-        AppCard(modifier, padding = Space.x5) {
+        AppCard(modifier, padding = Space.x4) {
             Column(verticalArrangement = Arrangement.spacedBy(Space.x3)) {
-                SectionHeader("Comisión", subtitle = "Según tu plan actual")
-                AppText(formatBps(status.feeBps), style = AppTheme.type.display)
-                AppText("por pedido", style = AppTheme.type.title, color = c.inkMuted)
+                SectionHeader("Comisión", label = "Según tu plan")
+                Row {
+                    val type = AppTheme.type
+                    AppText(
+                        formatBps(status.feeBps), modifier = Modifier.alignByBaseline(), maxLines = 1,
+                        style = type.display.copy(fontFamily = type.monoLg.fontFamily, fontWeight = type.monoLg.fontWeight, letterSpacing = type.monoLg.letterSpacing),
+                    )
+                    Spacer(Modifier.width(Space.x2))
+                    AppText("por pedido", modifier = Modifier.alignByBaseline(), style = type.bodySm, color = c.inkMuted)
+                }
                 AppDivider()
                 KeyValueRow("En un pedido de \$500", "\$" + centsToPesosText(50_000L * status.feeBps / 10_000L))
                 AppText("Se descuenta sola en cada cobro. Sin rentas ocultas ni cargos por retiro.", style = AppTheme.type.bodySm, color = c.inkSubtle)
@@ -147,17 +151,17 @@ private fun PaymentsContent(status: MpConnectionStatus, busy: Boolean, onConnect
         }
     }
     val methods: @Composable (Modifier) -> Unit = { modifier ->
-        AppCard(modifier, padding = Space.x5) {
+        AppCard(modifier, padding = Space.x4) {
             Column(verticalArrangement = Arrangement.spacedBy(Space.x3)) {
-                SectionHeader("Métodos aceptados", subtitle = "Lo que tus clientes pueden usar al pagar")
+                SectionHeader("Métodos aceptados", label = "${status.methods.size} activos")
                 if (status.methods.isEmpty()) {
                     AppText("Aún no hay métodos habilitados.", style = AppTheme.type.bodySm, color = c.inkMuted)
                 }
                 status.methods.forEach { method ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.x3)) {
-                        IconBadge(method.icon(), size = 36.dp)
-                        AppText(method.label(), Modifier.weight(1f), maxLines = 1)
-                        PanelIcon(AppIcons.Check, tint = if (status.connected) c.success else c.inkSubtle)
+                        IconBadge(method.icon(), size = Space.x10)
+                        AppText(method.label(), Modifier.weight(1f), style = AppTheme.type.title, maxLines = 1)
+                        StatusDot(if (status.connected) c.positive else c.inkSubtle)
                     }
                 }
             }
@@ -165,27 +169,19 @@ private fun PaymentsContent(status: MpConnectionStatus, busy: Boolean, onConnect
     }
 
     if (size == WindowSize.EXPANDED) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x5)) {
-            commission(Modifier.weight(1f))
-            methods(Modifier.weight(1.3f))
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
+            commission(Modifier.weight(1f).fillMaxHeight())
+            methods(Modifier.weight(1.3f).fillMaxHeight())
         }
     } else {
         commission(Modifier.fillMaxWidth())
         methods(Modifier.fillMaxWidth())
     }
 
-    Row(
-        Modifier.fillMaxWidth().clip(AppTheme.shapes.md).background(if (status.liveMode) c.successSoft else c.infoSoft).padding(Space.x4),
-        horizontalArrangement = Arrangement.spacedBy(Space.x3),
-    ) {
-        PanelIcon(AppIcons.Info, tint = if (status.liveMode) c.success else c.info, size = 20.dp)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            AppText(if (status.liveMode) "Modo producción" else "Modo de pruebas (sandbox)", style = AppTheme.type.title)
-            AppText(
-                if (status.liveMode) "Los cobros son reales y se acreditan en tu cuenta de Mercado Pago."
-                else "Los cobros son simulados y no mueven dinero real. Úsalo para probar tu menú de punta a punta antes de vender.",
-                style = AppTheme.type.bodySm, color = c.inkMuted,
-            )
-        }
-    }
+    PanelNotice(
+        title = if (status.liveMode) "Modo producción" else "Modo de pruebas (sandbox)",
+        text = if (status.liveMode) "Los cobros son reales y se acreditan en tu cuenta de Mercado Pago."
+        else "Los cobros son simulados y no mueven dinero real. Úsalo para probar tu menú de punta a punta antes de vender.",
+        tone = if (status.liveMode) Tone.SUCCESS else Tone.INFO,
+    )
 }

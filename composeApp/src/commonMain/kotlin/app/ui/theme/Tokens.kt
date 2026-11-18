@@ -15,7 +15,18 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 
-/** Paleta completa del sistema "Lienzo": papel y tinta neutros + un solo color de marca. */
+/**
+ * Paleta de NOCHE ("oscuro de precisión"). La interfaz es negra, plana y exacta; lo único que cambia
+ * entre restaurantes es [primary] / [onPrimary] (la "brasa").
+ *
+ * - [canvas] fondo · [surface] superficie 1 (controles, mosaicos, barras) · [surfaceRaised] superficie 2
+ *   (control sobre superficie 1) · [surfaceSunken] alias heredado de superficie 2 (NOCHE no tiene hundidos).
+ * - [line] filete de 1 px · [lineStrong] filete sobre fotografía o para dar énfasis.
+ * - [ink] texto principal · [inkMuted] secundario · [inkSubtle] etiquetas.
+ * - [primary] brasa: significa "tu pedido" y sólo existe como color sólido (nunca contorno).
+ * - [select] / [onSelect] la selección se marca con tinta sólida.
+ * - [positive] único semántico del menú ("abierto"); [success] es su alias para paneles.
+ */
 @Immutable
 data class AppColors(
     val canvas: Color, val surface: Color, val surfaceRaised: Color, val surfaceSunken: Color,
@@ -25,18 +36,34 @@ data class AppColors(
     val success: Color, val warning: Color, val danger: Color, val info: Color,
     val successSoft: Color, val warningSoft: Color, val dangerSoft: Color, val infoSoft: Color,
     val scrim: Color, val isDark: Boolean,
+    val select: Color = ink, val onSelect: Color = canvas,
+    val positive: Color = success,
 )
 
-/** Escala tipográfica; display/h1/h2/h3 usan la fuente display del tenant. */
+/**
+ * Escala tipográfica de NOCHE: 40 · 32 · 20 · 16 · 15 · 13 · 11, interlíneas en múltiplos de 4.
+ * Todo es Geist; las cifras (precios, conteos, horas) y las etiquetas de 11 van en Geist Mono.
+ *
+ * display 40/44 · h1 32/36 · h2 20/24 · h3 16/20 seminegrita · title 16/20 media · titleSm 15/20 media ·
+ * body 16/24 · bodySm 13/20 · label 11/16 (sans) · monoLabel 11/16 (+0.06em, va en MAYÚSCULAS: usa `LabelText`) ·
+ * mono 13/20 · monoMd 16/20 · monoLg 20/24.
+ */
 @Immutable
 data class AppTypography(
     val display: TextStyle, val h1: TextStyle, val h2: TextStyle, val h3: TextStyle,
     val title: TextStyle, val body: TextStyle, val bodySm: TextStyle, val label: TextStyle,
+    val titleSm: TextStyle = title,
+    val monoLabel: TextStyle = label,
+    val mono: TextStyle = bodySm,
+    val monoMd: TextStyle = title,
+    val monoLg: TextStyle = h2,
 )
 
+/** Radios de NOCHE: xs 4 · sm 8 · md 12 · lg 16 (interior = exterior − 4). `control` = md; `pill` = sm (no hay cápsulas). */
 @Immutable
 data class AppShapes(val xs: Shape, val sm: Shape, val md: Shape, val lg: Shape, val control: Shape, val pill: Shape)
 
+/** Retícula de 4 px. El margen de página es [gutter] (16) y el objetivo táctil mínimo [tap] (44). */
 object Space {
     val x1 = 4.dp
     val x2 = 8.dp
@@ -48,6 +75,39 @@ object Space {
     val x10 = 40.dp
     val x14 = 56.dp
     val x18 = 72.dp
+
+    /** Margen lateral de página. */
+    val gutter = 16.dp
+
+    /** Objetivo táctil mínimo. */
+    val tap = 44.dp
+}
+
+/** Medidas fijas de los componentes de NOCHE (dp). */
+object Sizes {
+    /** Filete. */
+    val hairline = 1.dp
+
+    /** Ícono estándar (trazo ≈ 1.5 px a este tamaño). */
+    val icon = 20.dp
+
+    /** Cara visible de un control de fila (agregar, stepper chico). */
+    val controlSm = 32.dp
+
+    /** Control estándar: botón de ícono, segmentado, campo compacto. */
+    val control = 44.dp
+
+    /** Control alto: botón principal, campo de texto, fila de opción, stepper grande. */
+    val controlLg = 48.dp
+
+    /** Botón de 56 para pantallas de un solo paso (pagar, entrar). */
+    val controlXl = 56.dp
+
+    /** Barra inferior y navegación pegada. */
+    val bar = 72.dp
+
+    /** Miniatura de fila de platillo. */
+    val thumb = 80.dp
 }
 
 object Motion {
@@ -64,15 +124,21 @@ object Motion {
 
     fun <T> snappy(): SpringSpec<T> = spring(dampingRatio = 0.8f, stiffness = 500f)
     fun <T> gentle(): SpringSpec<T> = spring(dampingRatio = 0.85f, stiffness = 200f)
-    fun <T> bouncy(): SpringSpec<T> = spring(dampingRatio = 0.5f, stiffness = 600f)
+
+    /** NOCHE no rebota: se conserva por compatibilidad y equivale a un resorte firme sin sobrepaso notorio. */
+    fun <T> bouncy(): SpringSpec<T> = spring(dampingRatio = 0.9f, stiffness = 600f)
 }
 
-/** Preferencia de modo oscuro del usuario; `null` = seguir al tenant / sistema. */
+/**
+ * NOCHE es sólo oscuro: se conserva por compatibilidad y ya no cambia nada en pantalla.
+ * `AppTheme.colors.isDark` siempre es `true`.
+ */
 object ThemeController {
     var darkOverride: Boolean? by mutableStateOf(null)
 
+    @Suppress("UNUSED_PARAMETER")
     fun toggle(currentIsDark: Boolean) {
-        darkOverride = !currentIsDark
+        // Sin efecto: el modo oscuro lo fija el sistema.
     }
 }
 
@@ -95,3 +161,11 @@ val LocalWindowSize: ProvidableCompositionLocal<WindowSize> = compositionLocalOf
 
 /** Color de contenido heredado (texto/íconos) dentro de superficies de color, p. ej. botones. */
 val LocalContentColor: ProvidableCompositionLocal<Color> = compositionLocalOf { Color.Unspecified }
+
+/**
+ * Nivel de la superficie que contiene al contenido: 0 = fondo, 1 = superficie 1, 2 = superficie 2.
+ * Los controles se pintan un nivel arriba de su contenedor (`AppTheme.controlFill`), así un botón
+ * secundario o un stepper dentro de una tarjeta o de la barra inferior nunca se funde con ella.
+ * Lo proveen `AppCard`, los diálogos, las hojas y `BottomBar`.
+ */
+val LocalSurfaceLevel: ProvidableCompositionLocal<Int> = compositionLocalOf { 0 }

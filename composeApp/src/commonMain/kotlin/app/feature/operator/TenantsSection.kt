@@ -1,14 +1,11 @@
 package app.feature.operator
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,10 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -59,11 +53,14 @@ import app.ui.components.ButtonSize
 import app.ui.components.ButtonVariant
 import app.ui.components.EmptyState
 import app.ui.components.ErrorState
+import app.ui.components.LabelText
 import app.ui.components.PageHeader
 import app.ui.components.Skeleton
+import app.ui.components.StatusDot
 import app.ui.components.StatusPill
 import app.ui.components.TagBadge
 import app.ui.components.Tone
+import app.ui.components.flatSurface
 import app.ui.components.pressable
 import app.ui.theme.AppTheme
 import app.ui.theme.LocalWindowSize
@@ -180,7 +177,7 @@ internal fun TenantsSection(store: OperatorStore, onReload: () -> Unit) {
                 onAction = { query = ""; filter = null },
             )
             ws == WindowSize.EXPANDED -> TenantsTable(store, filtered, actions)
-            else -> OpGrid(filtered, columns = if (ws == WindowSize.MEDIUM) 2 else 1, spacing = Space.x3) { t ->
+            else -> OpGrid(filtered, columns = if (ws == WindowSize.MEDIUM) 2 else 1) { t ->
                 key(t.id) {
                     NewRowReveal(isNew = t.id == store.highlightTenantId, onSettled = { store.highlightTenantId = null }) { tint, fresh ->
                         TenantCard(t, tint, fresh, actions)
@@ -209,27 +206,27 @@ internal fun TenantsSection(store: OperatorStore, onReload: () -> Unit) {
     }
 }
 
-/** Revela con animación la fila recién creada y la resalta unos segundos. */
+/**
+ * Revela con una animación corta la fila recién creada y la marca unos segundos con la etiqueta "Nuevo".
+ * Sin tintes ni brillos: el primer parámetro del contenido se conserva y siempre es transparente.
+ */
 @Composable
 private fun NewRowReveal(isNew: Boolean, onSettled: () -> Unit, content: @Composable (Color, Boolean) -> Unit) {
     val reveal = remember { MutableTransitionState(!isNew).apply { targetState = true } }
-    var glow by remember { mutableStateOf(isNew) }
+    var fresh by remember { mutableStateOf(isNew) }
     LaunchedEffect(Unit) {
         if (isNew) {
-            delay(3200)
-            glow = false
-            delay(700)
+            delay(3900)
+            fresh = false
             onSettled()
         }
     }
-    val soft = AppTheme.colors.successSoft
-    val tint by animateColorAsState(if (glow) soft else soft.copy(alpha = 0f), tween(Motion.HERO), label = "new-row-tint")
     AnimatedVisibility(
         visibleState = reveal,
-        enter = expandVertically(tween(Motion.HERO, easing = Motion.standard), expandFrom = Alignment.Top) +
-            fadeIn(tween(Motion.HERO, delayMillis = Motion.FAST)),
+        enter = expandVertically(tween(Motion.SLOW, easing = Motion.standard), expandFrom = Alignment.Top) +
+            fadeIn(tween(Motion.SLOW, delayMillis = Motion.FAST)),
     ) {
-        content(tint, glow)
+        content(Color.Transparent, fresh)
     }
 }
 
@@ -261,7 +258,7 @@ private fun TenantsTable(store: OperatorStore, tenants: List<TenantSummary>, act
                                     .fillMaxWidth()
                                     .background(tint)
                                     .pressable(scale = 0.998f, onClick = { actions.onDetail(t) })
-                                    .padding(start = Space.x5, end = Space.x5, top = Space.x3, bottom = Space.x3),
+                                    .padding(start = Space.x4, end = Space.x4, top = Space.x3, bottom = Space.x3),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 OpCell(cName) {
@@ -270,18 +267,18 @@ private fun TenantsTable(store: OperatorStore, tenants: List<TenantSummary>, act
                                         Column(Modifier.weight(1f, fill = false)) {
                                             Row(horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.CenterVertically) {
                                                 AppText(t.name, Modifier.weight(1f, fill = false), style = AppTheme.type.title, maxLines = 1)
-                                                if (fresh) TagBadge("Nuevo", tone = Tone.SUCCESS)
+                                                if (fresh) TagBadge("Nuevo", tone = Tone.PRIMARY)
                                             }
-                                            AppText("/r/${t.slug}", style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
+                                            AppText("/r/${t.slug}", style = AppTheme.type.mono, color = AppTheme.colors.inkMuted, maxLines = 1)
                                         }
                                     }
                                 }
-                                OpCell(cPlan) { AppText(t.planName, maxLines = 1) }
+                                OpCell(cPlan) { AppText(t.planName, style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1) }
                                 OpCell(cStatus) { StatusPill(t.status.label(), tone = t.status.tone()) }
                                 OpCell(cMp) { MpIndicator(t.mpConnected, showLabel = wide) }
-                                OpCell(cOrders) { AppText(formatCount(t.orders30d), maxLines = 1) }
-                                OpCell(cGmv) { AppText(formatMoneyCompact(t.gmv30dCents), maxLines = 1) }
-                                OpCell(cMrr) { AppText(formatMoney(t.mrrCents), maxLines = 1) }
+                                OpCell(cOrders) { AppText(formatCount(t.orders30d), style = AppTheme.type.mono, maxLines = 1) }
+                                OpCell(cGmv) { AppText(formatMoneyCompact(t.gmv30dCents), style = AppTheme.type.mono, maxLines = 1) }
+                                OpCell(cMrr) { AppText(formatMoney(t.mrrCents), style = AppTheme.type.mono, maxLines = 1) }
                                 if (wide) {
                                     OpCell(cCreated) {
                                         AppText(relativeTime(t.createdAt), style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
@@ -301,9 +298,9 @@ private fun TenantsTable(store: OperatorStore, tenants: List<TenantSummary>, act
 
 @Composable
 internal fun MpIndicator(connected: Boolean, showLabel: Boolean = true) {
-    val color = if (connected) AppTheme.colors.success else AppTheme.colors.inkSubtle
+    // El estado es un punto sólido: verde = cuenta conectada.
     Row(horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.CenterVertically) {
-        OpIcon(if (connected) AppIcons.Check else AppIcons.Plug, tint = color, size = 16.dp)
+        StatusDot(if (connected) AppTheme.colors.positive else AppTheme.colors.inkSubtle)
         if (showLabel) {
             AppText(
                 if (connected) "Conectado" else "Sin conectar",
@@ -324,6 +321,7 @@ private fun TenantRowMenu(t: TenantSummary, actions: TenantActions) {
             onClick = { open = true },
             contentDescription = "Acciones de ${t.name}",
             tint = AppTheme.colors.inkMuted,
+            plain = true,
         )
         if (open) {
             val offsetY = with(LocalDensity.current) { 44.dp.roundToPx() }
@@ -336,16 +334,13 @@ private fun TenantRowMenu(t: TenantSummary, actions: TenantActions) {
                 val shown = remember { MutableTransitionState(false).apply { targetState = true } }
                 AnimatedVisibility(
                     visibleState = shown,
-                    enter = fadeIn(tween(Motion.FAST)) +
-                        scaleIn(tween(Motion.BASE, easing = Motion.standard), initialScale = 0.94f, transformOrigin = TransformOrigin(1f, 0f)),
+                    enter = fadeIn(tween(Motion.FAST)),
                 ) {
+                    // Menú flotante plano: superficie 2 con filete fuerte. Sin sombra.
                     Column(
                         Modifier
                             .padding(Space.x3)
-                            .shadow(18.dp, AppTheme.shapes.md)
-                            .clip(AppTheme.shapes.md)
-                            .background(AppTheme.colors.surfaceRaised)
-                            .border(1.dp, AppTheme.colors.line, AppTheme.shapes.md)
+                            .flatSurface(AppTheme.colors.surfaceRaised, AppTheme.colors.lineStrong, AppTheme.shapes.md)
                             .width(232.dp)
                             .padding(vertical = Space.x1),
                     ) {
@@ -379,7 +374,7 @@ private fun MenuRow(text: String, icon: ImageVector, danger: Boolean = false, on
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OpIcon(icon, tint = if (danger) color else AppTheme.colors.inkMuted)
-        AppText(text, color = color, maxLines = 1)
+        AppText(text, style = AppTheme.type.titleSm, color = color, maxLines = 1)
     }
 }
 
@@ -402,9 +397,9 @@ private fun TenantCard(t: TenantSummary, tint: Color, fresh: Boolean, actions: T
                 Column(Modifier.weight(1f)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.x2), verticalAlignment = Alignment.CenterVertically) {
                         AppText(t.name, Modifier.weight(1f, fill = false), style = AppTheme.type.title, maxLines = 1)
-                        if (fresh) TagBadge("Nuevo", tone = Tone.SUCCESS)
+                        if (fresh) TagBadge("Nuevo", tone = Tone.PRIMARY)
                     }
-                    AppText("/r/${t.slug} · ${t.planName}", style = AppTheme.type.bodySm, color = AppTheme.colors.inkMuted, maxLines = 1)
+                    AppText("/r/${t.slug}", style = AppTheme.type.mono, color = AppTheme.colors.inkMuted, maxLines = 1)
                 }
                 StatusPill(t.status.label(), tone = t.status.tone())
             }
@@ -416,7 +411,7 @@ private fun TenantCard(t: TenantSummary, tint: Color, fresh: Boolean, actions: T
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 MpIndicator(t.mpConnected)
                 Spacer(Modifier.weight(1f))
-                AppText("Alta ${relativeTime(t.createdAt)}", style = AppTheme.type.bodySm, color = AppTheme.colors.inkSubtle, maxLines = 1)
+                LabelText("Plan ${t.planName} · alta ${relativeTime(t.createdAt)}")
             }
             AppDivider()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.x2)) {
@@ -431,7 +426,7 @@ private fun TenantCard(t: TenantSummary, tint: Color, fresh: Boolean, actions: T
                     if (suspended) "Reactivar" else "Suspender",
                     onClick = { actions.onStatus(t) },
                     modifier = Modifier.weight(1f),
-                    variant = ButtonVariant.GHOST,
+                    variant = if (suspended) ButtonVariant.SECONDARY else ButtonVariant.DANGER,
                     size = ButtonSize.SM,
                 )
             }
@@ -442,8 +437,8 @@ private fun TenantCard(t: TenantSummary, tint: Color, fresh: Boolean, actions: T
 @Composable
 private fun CardFigure(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(Space.x1)) {
-        AppText(label, style = AppTheme.type.label, color = AppTheme.colors.inkSubtle, maxLines = 1)
-        AppText(value, style = AppTheme.type.title, maxLines = 1)
+        LabelText(label)
+        AppText(value, style = AppTheme.type.monoMd, maxLines = 1)
     }
 }
 
@@ -454,7 +449,7 @@ private fun TenantsSkeleton(ws: WindowSize) {
             repeat(6) { i ->
                 if (i > 0) AppDivider()
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = Space.x5, vertical = Space.x4),
+                    Modifier.fillMaxWidth().padding(horizontal = Space.x4, vertical = Space.x4),
                     horizontalArrangement = Arrangement.spacedBy(Space.x4),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -467,7 +462,7 @@ private fun TenantsSkeleton(ws: WindowSize) {
             }
         }
     } else {
-        OpGrid((1..4).toList(), columns = if (ws == WindowSize.MEDIUM) 2 else 1, spacing = Space.x3) {
+        OpGrid((1..4).toList(), columns = if (ws == WindowSize.MEDIUM) 2 else 1) {
             Skeleton(Modifier.fillMaxWidth().height(196.dp), shape = AppTheme.shapes.lg)
         }
     }
