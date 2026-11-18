@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import app.platform.AndroidPlatform
@@ -13,7 +14,11 @@ import com.whitelabel.restaurantes.R
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        // El sistema de diseño es siempre oscuro: barras transparentes con iconos claros, sea cual sea el modo del teléfono.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         super.onCreate(savedInstanceState)
         AndroidPlatform.appContext = applicationContext
         // Android 13+: pide permiso para mostrar notificaciones (el sonido de la app suena aunque se niegue).
